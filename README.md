@@ -37,23 +37,8 @@ To get a local copy up and running, follow these simple steps.
 -   SUMO installed and configured in your system's PATH.
 -   Node.js and npm (or yarn)
 
-### Setup
+------
 
-1.  **Clone the repo**
-    ```sh
-    git clone [https://github.com/your_username/intelli-flow-ai.git](https://github.com/your_username/intelli-flow-ai.git)
-    cd intelli-flow-ai
-    ```
-2.  **Setup the Python Environment (Backend)**
-    ```sh
-    cd backend  # Or your AI script's directory
-    pip install -r requirements.txt
-    ```
-3.  **Setup the Frontend Dashboard**
-    ```sh
-    cd frontend # Or your dashboard's directory
-    npm install
-    ```
 
 ## 🚀 Usage
 
