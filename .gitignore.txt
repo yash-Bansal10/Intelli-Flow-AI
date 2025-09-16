@@ -1,0 +1,10 @@
+# Python temporary files
+__pycache__/
+*.pyc
+
+# Virtual Environment folder
+venv/
+ai_core/venv/
+
+# Secret files
+.env
