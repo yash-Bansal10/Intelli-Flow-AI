@@ -4,8 +4,12 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 import threading
 
-# This dictionary is our global data store. The AI will write to it, and the API will read from it.
 
+# Created a lock to manage access to the live_data dictionary
+data_lock = threading.Lock()
+
+
+# This dictionary is our global data store. The AI will write to it, and the API will read from it.
 live_data = {
     "simulation_time":0,
     "current_phase": "Initializing...",
@@ -24,12 +28,14 @@ CORS(app)
 # This decorator tells our server, "When someone visits this specific URL, run the function directly below it."
 @app.route('/live_data')
 def get_data():
-    return jsonify(live_data)
+    with data_lock:
+        return jsonify(live_data)
 
 def update_live_data(new_data):
     """This function is the bridge, allowing the AI script to update our data store."""
     global live_data
-    live_data = new_data
+    with data_lock:
+        live_data = new_data
 
 def run_api():
     """A simple function to run the Flask server."""
