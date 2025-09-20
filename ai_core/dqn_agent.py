@@ -38,17 +38,45 @@ class DQNAgent:
         return np.argmax(act_values[0])
 
     def replay(self, batch_size):
+        if len(self.memory) < batch_size:
+            return  # Not enough memory to replay
+        
         minibatch = random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
-            target = reward
+
+        # 1. Get current Q-values for all states in the batch
+        states = np.array([i[0] for i in minibatch])
+        states = np.squeeze(states)
+        current_q_values = self.model.predict_on_batch(states)
+
+        # 2. Get next Q-values for all next_states in the batch
+        next_states = np.array([i[3] for i in minibatch])
+        next_states = np.squeeze(next_states)
+        next_q_values = self.model.predict_on_batch(next_states)
+
+        X=[]
+        y=[]
+
+        # 3. Calculate target Q-values for each experience in the batch
+        for index,(state,action,reward,next_state,done) in enumerate(minibatch):
             if not done:
-                target = (reward + self.gamma * np.amax(self.model.predict(next_state)[0]))
-            target_f = self.model.predict(state)
-            target_f[0][action] = target
-            self.model.fit(state, target_f, epochs=1, verbose=0)
+                new_q = reward + self.gamma * np.amax(next_q_values[index])
+            else:
+                new_q = reward
+
+            # Update the Q-value for the action that was taken
+            current_qs = current_q_values[index]
+            current_qs[action] = new_q
+            
+            X.append(state)
+            y.append(current_qs)
+
+
+        # 4. Fit the model on t(he entire batch at once
+        self.model.fit(np.array(X).squeeze(), np.array(y), batch_size=batch_size, epochs=1, verbose=0)
+
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-
+        
 
     def save(self, name):
         """Saves the neural network's weights to a file."""
