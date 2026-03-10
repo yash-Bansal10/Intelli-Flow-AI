@@ -8,3 +8,5 @@ ai_core/venv/
 
 # Secret files
 .env
+
+documentation/

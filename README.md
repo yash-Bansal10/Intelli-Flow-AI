@@ -80,6 +80,10 @@ The powerhouse at the traffic pole extracting metrics locally.
 The decision-maker running on the Jetson.
 
 - **Multi-Agent DQN:** Analyzes the State Vector and actively decides the next traffic light phase dynamically based on real-time conditions and historical patterns.
+  - **State Space ($S$):** `Local_Queue`, `Phase_State` (One-hot encoding), `Neighbor_Pressure`
+  - **Action Space ($A$):** Discrete `{Stay_Current_Phase, Switch_to_Next_Phase}`
+  - **Custom Reward Function ($R$):** Custom-designed by our team specifically for unstructured traffic. It mathematically balances reducing congestion while heavily penalizing dangerous phase flickering: \
+    $R = -(\alpha \cdot \text{QueueLength} + \beta \cdot \text{WaitTime} + \gamma \cdot \text{PhaseSwitches})$
 - **Max Pressure logic:** Identifies and relieves lanes with the most dangerous congestion buildup.
 - **Emergency Controller Logic:** Visually and acoustically detects approaching ambulances/fire trucks in real-time. Preemptively flushes traffic to create an AI Green Corridor, dropping response latency to near-zero.
 
@@ -129,6 +133,7 @@ Intelli-Flow AI is built to expand into a complete Smart City Ecosystem:
 
 - **🚶 Pedestrian-Centric Optimization:** Dynamically adjusting crosswalk times based on pedestrian density detected via CV.
 - **🍃 Emission-Aware Routing:** Integrating sensors to detect high CO2 levels and "flushing" traffic from those zones to reduce local pollution spikes.
+- **🚌 Public Transport Priority (TSP):** Detecting city buses via CV and slightly extending green phases to ensure public transit remains on schedule.
 - **Robustness via Domain Randomization:** Training models with injected "Observation Noise" to simulate camera lag, dust/fog occlusions, and sensor dropouts, ensuring safe decisions even with "fuzzy" real-world data.
 
 ---
@@ -202,5 +207,3 @@ To run our Deep Reinforcement Learning model and interactive dashboard using the
 - **Real Time Object Detection:** [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S1110016825003850)
 
 ---
-
-
