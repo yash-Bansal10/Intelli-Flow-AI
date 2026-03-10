@@ -1,14 +1,15 @@
 <div align="center">
   <img src="assets/DemoGIF.gif" alt="Intelli-Flow AI Logo" width="150"/>
   <h1>Intelli-Flow AI 🚦</h1>
-  <p>An intelligent, adaptive traffic control system powered by Deep Reinforcement Learning.</p>
+  <p>A Decentralized, Multi-Agent Reinforcement Learning (MARL) framework for adaptive traffic signal control in high-density, unstructured urban environments.</p>
+  <p><b>Zero Cloud Dependency | Infinitely Scalable | MCD-Deployment Ready Architecture</b></p>
   
   <p>
     <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python Badge"/>
     <img src="https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white" alt="TensorFlow Badge"/>
-    <img src="https://img.shields.io/badge/SUMO-E87D25?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxIDEiPjxwYXRoIGQ9Im0wIDBoMXYxaDB6IiBmaWxsPSIjMDMwMDIyIi8+PHBhdGggZD0ibTAuOTIxIDAuODc0di0wLjA3M2gtMC4xODFsLTAuMDI0IDAuMDAzdi0wLjU3OWwtMC4wMjQgMC4wMDN2MC4wNzNoMC4wNDd2MC41MDFoLTAuNDd2LTAuNzM2aDAuMDcxbDAuMDI0LTAuMDAzdjAuNjg0aDAuMzIybDAuMDI0LTAuMDAzdi0wLjU1OWwwLjAyNC0wLjAwM3YwLjU2MmgwLjA0N3YwLjA3M2gtMC4yMDZ6bS0wLjUxOS0wLjc3NGMwLjA1MyAwLjAyNyAwLjEwMyAwLjA1NyAwLjE0OCAwLjA4OWMwLjA0NyAwLjAzMyAwLjA5MSAwLjA2OSAwLjEyOSAwLjEwN2MwLjAzOCAwLjAzOCAwLjA2OSAwLjA3OCAwLjA5MiAwLjEyMWMwLjAyMyAwLjA0NCAwLjAzOCAwLjA5MSAwLjA0MiAwLjE0MmMwLjA2MiAwLjE3MSAwLjAyMSAwLjM2MS0wLjExMyAwLjQ4NmMtMC4wNzYgMC4wNzEtMC4xNzcgMC4xMTMtMC4yODIgMC4xMTNjLTAuMDk4IDAtMC4xOTYtMC4wMzQtMC4yNzYtMC4xMDJjLTAuMDgyLTAuMDctMC4xMjktMC4xNjctMC4xMzItMC4yNzJjLTAuMDA1LTAuMTU3IDAuMDQ0LTAuMzA4IDAuMTQzLTAuNDE5YzAuMDQ0LTAuMDUxIDAuMDk4LTAuMDkyIDAuMTU3LTAuMTIxYzAuMDMyLTAuMDE3IDAuMDY0LTAuMDMyIDAuMDk3LTAuMDQ1YzAuMDk1LTAuMDM4IDAuMTg4LTAuMDc0IDAuMjczLTAuMTE0di0wLjAxMmMwLTAuMDMzLTAuMDE2LTAuMDY0LTAuMDQzLTAuMDg5Yy0wLjAyOS0wLjAyNy0wLjA2My0wLjA0OC0wLjEwMi0wLjA2MmMtMC4wNzItMC4wMjYtMC4xNDgtMC4wMzQtMC4yMjMtMC4wMjJjLTAuMDc0IDAuMDEtMC4xNDMgMC4wNDEtMC4xOTggMC4wODljLTAuMDIxIDAuMDE4LTAuMDQxIDAuMDM4LTAuMDYgMC4wNTl2LTAuMDg2YzAuMDI0LTAuMDI0IDAuMDUxLTAuMDQ1IDAuMDgxLTAuMDYxYzAuMDc4LTAuMDQ0IDAuMTY2LTAuMDY4IDAuMjU2LTAuMDY4YzAuMDk2IDAgMC4xOTEgMC4wMjcgMC4yNzcgMC4wNzZ6bS0wLjE1MyAwLjQ5MmMwLjAzMiAwLjAyOSAwLjA1OSAwLjA2MSAwLjA3OCAwLjA5NmMwLjAxOSAwLjAzNSAwLjAyOSAwLjA3MiAwLjAzMSAwLjExMmMwLjAwMiAwLjA5NC0wLjAyOSAwLjE4NC0wLjA4OSAwLjI1NmMtMC4wMzcgMC4wNDQtMC4wODYgMC4wNzItMC4xMzcgMC4wNzJjLTAuMDUxIDAtMC4xMDEtMC4wMTgtMC4xNDEtMC4wNTJjLTAuMDgtMC4wNjgtMC4xMTYtMC4xNzItMC4xMDMtMC4yODJjMC4wMDgtMC4wNjggMC4wMzMtMC4xMzEgMC4wNzEtMC4xODJjMC4wMjYtMC4wMzUgMC4wNTktMC4wNjUgMC4wOTctMC4wODljMC4wMjUtMC4wMTYgMC4wNS0wLjAzIDAuMDc1LTAuMDQxYzAuMDM3LTAuMDE1IDAuMDc0LTAuMDI4IDAuMTEyLTAuMDM4YzAuMDM5LTAuMDEgMC4wNzktMC4wMTYgMC4xMTktMC4wMTZzMC4wNzkgMC4wMDYgMC4xMTggMC4wMTZjMC4wMzcgMC4wMSAwLjA3MyAwLjAyMyAwLjEwNyAwLjA0MWMwLjAyNCAwLjAxMiAwLjA0NyAwLjAyNyAwLjA2OSAwLjA0M3YwLjA3MmMtMC4wMi0wLjAxNC0wLjA0Mi0wLjAyOC0wLjA2NS0wLjA0MWMtMC4wNjMtMC4wMzgtMC4xMzItMC4wNi0wLjIwMi0wLjA2NmMtMC4wMTQgMC0wLjAyOSAwLTAuMDQzIDAuMDAxYy0wLjA5MSAwLjAwNi0wLjE3OCAwLjA0Ni0wLjI0NSAwLjExMnptMC4yNDMgMC4zNzljMC4wMy0wLjAyMSAwLjA1OC0wLjA0NSAwLjA4My0wLjA2OWMwLjAzOC0wLjAzNSAwLjA3LTAuMDc0IDAuMDkzLTAuMTE3YzAuMDIyLTAuMDQxIDAuMDM2LTAuMDgyIDAuMDQxLTAuMTI2YzAuMDA5LTAuMDc2LTAuMDA3LTAuMTUxLTAuMDQyLTAuMjE2Yy0wLjAyMi0wLjA0Mi0wLjA1My0wLjA3OC0wLjA5Mi0wLjEwN2MtMC4wNC0wLjAzLTAuMDgyLTAuMDU0LTAuMTI2LTAuMDczYy0wLjA1OS0wLjAyNS0wLjEyMS0wLjAzOC0wLjE4MS0wLjAzOGMtMC4wOTQgMC0wLjE4NCAwLjAzMS0wLjI1OSAwLjA4OWMtMC4wODkgMC4wNjctMC4xNDUgMC4xNjYtMC4xNDUgMC4yNzZjMC4wMDQgMC4xNTQgMC4wNjcgMC4yOTcgMC4xNzMgMC40MDNjMC4wNjUgMC4wNjUgMC4xNDkgMC4xMDcgMC4yNCAwLjEyMmMwLjA2NSAwLjAxMSAwLjEyOS0wLjAwMSAwLjE4OC0wLjAzMmMwLjA1OC0wLjAzMiAwLjEwOC0wLjA3OSAwLjE0OC0wLjEzN2MwLjAyNy0wLjAzOCAwLjA0NC0wLjA4MSAwLjA1Mi0wLjEyNmMwLjAxLTAuMDUyIDAuMDExLTAuMTAzIDAuMDAzLTAuMTUyYy0wLjAwOC0wLjA1MS0wLjAzLTAuMDk3LTAuMDYxLTAuMTMybC0wLjAxMS0wLjAxMmMtMC4wMi0wLjAyLTAuMDQzLTAuMDM3LTAuMDY4LTAuMDUyYy0wLjAzMy0wLjAyLTAuMDY3LTAuMDM2LTAuMTAxLTAuMDR2LTAuMDcxYzAuMDI5IDAuMDA2IDAuMDU3IDAuMDE3IDAuMDgyIDAuMDMyYzAuMDYyIDAuMDM4IDAuMTE2IDAuMDkyIDAuMTQ4IDAuMTU3YzAuMDE4IDAuMDM3IDAuMDI5IDAuMDc1IDAuMDMyIDAuMTE0YzAuMDA0IDAuMDYxLTAuMDA1IDAuMTIyLTAuMDI4IDAuMTc3Yy0wLjAxMyAwLjAzMi0wLjAzMSAwLjA2Mi0wLjA1MiAwLjA4OWMtMC4wMiAwLjAyOC0wLjQxNyAwLjM5OC0wLjQxNyAwLjM5OHoiIGZpbGw9IiNlOGQ4MjUiLz48L3N2Zz4=&logoColor=white" alt="SUMO Badge"/>
+    <img src="https://img.shields.io/badge/YOLOv8-00FFFF?style=for-the-badge&logo=yolo&logoColor=black" alt="YOLOv8 Badge"/>
+    <img src="https://img.shields.io/badge/edge-NVIDIA%20Jetson-76B900?style=for-the-badge&logo=nvidia" alt="NVIDIA Edge AI"/>
     <img src="https://img.shields.io/badge/Next-black?style=for-the-badge&logo=next.js&logoColor=white" alt="Next.js Badge"/>
-    <img src="https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge" alt="MIT License Badge"/>
   </p>
 </div>
 
@@ -16,7 +17,7 @@
 
 <div align="center">
 
-**Live Demo**
+**Live Simulation Demo**
 
 ![Intelli-Flow AI Demo](assets/DemoGIF.gif)
 
@@ -24,124 +25,182 @@
 
 ---
 
-## 📖 Overview
+## 🛑 The Problem
 
-Intelli-Flow AI is a smart traffic management solution designed to replace outdated, inefficient fixed-time traffic light controllers. Traditional systems are blind to real-time conditions, leading to unnecessary congestion, wasted fuel, and increased travel times. 
+Modern cities are plagued by outdated, fixed-time traffic light controllers. These traditional, rigid systems lead to massive problems:
 
-Our solution uses a **Deep Q-Network (DQN)**, a reinforcement learning agent, to create a dynamic and responsive system. The AI constantly observes traffic queues and makes intelligent decisions to optimize flow, applying a **"max pressure"** policy to relieve the most congested lanes first. This project proves that an AI agent can learn complex traffic control strategies and significantly outperform traditional methods.
+- **Inefficient Flow:** Fixed timers cause agonizing wait times at empty intersections while highly congested opposing lanes are forced to wait.
+- **Economic & Environmental Waste:** Wasted fuel and increased carbon emissions due to unnecessary idling.
+- **No Emergency Adaptation:** Because of rigid timers, ambulances, fire trucks, and police vehicles are frequently delayed at intersections, losing precious minutes that could determine life or death. Average response times in Indian cities are much higher than optimal, worsening outcomes during critical emergencies.
 
-This project was developed for the **Smart India Hackathon (SIH)**.
+While global projects like _Alibaba City Brain_ use a **Centralized Cloud** approach, streaming high-definition video from 500+ junctions to a central server requires:
 
----
-
-## ✨ Key Features
-
--   🧠 **Intelligent Agent:** A DQN model built with TensorFlow that learns and adapts to changing traffic patterns.
--   🚗 **Realistic Simulation:** Built on the **SUMO (Simulation of Urban MObility)** platform for high-fidelity traffic modeling.
--   📊 **Live Dashboard:** A real-time web interface built with Next.js and Tailwind CSS to visualize intersection stats and AI decisions.
--   ⚡ **Dynamic Control:** Applies a "max pressure" policy to prioritize lanes with the heaviest traffic, minimizing overall congestion.
--   📈 **Performance Analytics:** Tracks key metrics and displays the agent's learning progress over time.
+- **Massive Bandwidth:** Over 8 Gigabits per second of continuous city-wide data streaming.
+- **Astronomical Infrastructure Costs:** Equipping datacenters with enterprise GPU clusters to decode thousands of videos simultaneously.
+- **High Latency & Single Point of Failure:** Central network outages cause city-wide traffic gridlocks. In the Indian context, constant high-speed connectivity to a central cloud is not guaranteed.
 
 ---
 
-## 🏗️ System Architecture
+## 💡 Our Solution: Decentralized Edge MARL
 
-The system operates in a continuous loop, allowing the AI to learn and adapt in real-time. The traffic simulator provides the state, the AI chooses an action, and the backend/frontend layers visualize the results.
+**Intelli-Flow AI** utilizes a **Decentralized Multi-Agent** architecture. Instead of streaming heavy videos to the cloud, each intersection is an "Autonomous Agent" capable of making decisions locally using **Edge AI computing (NVIDIA Jetson)** and **Deep Q-Learning (DQN)**.
+
+1. **Edge-Resilience & Low Latency:** Inference happens at the edge (NVIDIA Jetson) using TensorRT / CUDA / NVIDIA JetPack SDK optimization, removing the 200–500ms round-trip delay to a server.
+2. **Cost-Effective Scalability:** Eliminates the need for laying expensive optic fiber cables and maintaining heavy central GPU servers. Adding a new intersection doesn't increase the load on a central server; it simply adds one local compute node.
+3. **"Max Pressure" Optimization:** By utilizing Deep Q-Learning, our agents constantly measure the difference between incoming and outgoing congestion (Pressure) to instantly dissolve bottlenecks before gridlock occurs.
+
+---
+
+## ⚙️ How We Achieve It (The Workflow)
+
+Our robust, decentralized architecture combines computer vision, deep reinforcement learning, and peer-to-peer sharing.
 
 <div align="center">
-  <img src="assets/Architecture.png" alt="System Architecture Diagram" width="800"/>
+  <img src="assets/Architecture.png" alt="Intelli-Flow Architecture" />
 </div>
 
+### 1. Perception Layer (The "Indian Road" Factor)
+
+Gathers multi-modal real-time data from the physical intersection.
+
+- **Visual (Heterogeneous Traffic):** High-resolution IP Cameras alongside **Infrared/Thermal Cameras** for robust detection under low-light or adverse weather. Our CV module (Fine-Tuned YOLO model) detects chaotic, heterogeneous Indian traffic (Auto-rickshaws, bikes, heavy trucks, pedestrians).
+- **Sensor Fusion:** LiDAR & Radar validate queue distances and speed for robust presence detection.
+- **Acoustic:** Audio sensor / Siren detection classifies approaching emergency vehicles beyond line of sight.
+
+### 2. The Edge AI Box (NVIDIA Jetson)
+
+The powerhouse at the traffic pole extracting metrics locally.
+
+- **Traffic Controller Integration (Ethernet):** Seamless hardware interface connecting the edge AI box to existing signal controller cabinets.
+- Computes queue lengths and assigns **Passenger Car Unit (PCU)** weights to different vehicles, making the AI prioritize high-capacity buses over private cars.
+- Compresses this high-bandwidth video data into a lightweight **Initial State Vector**.
+
+### 3. Traffic AI Engine
+
+The decision-maker running on the Jetson.
+
+- **Multi-Agent DQN:** Analyzes the State Vector and actively decides the next traffic light phase dynamically based on real-time conditions and historical patterns.
+- **Max Pressure logic:** Identifies and relieves lanes with the most dangerous congestion buildup.
+- **Emergency Controller Logic:** Visually and acoustically detects approaching ambulances/fire trucks in real-time. Preemptively flushes traffic to create an AI Green Corridor, dropping response latency to near-zero.
+
+### 4. Safety Controller
+
+Hardware-level safety guarantees.
+
+- Enforces Minimum Green Times and Conflict Resolutions to ensure no dangerous light configurations are ever commanded.
+- A **Watchdog Monitor** (Galvanic Fail-Safe) reverts to a fixed timer immediately if hardware or model errors are detected.
+
+### 5. Communication-Efficient "V2X-Lite"
+
+- **Peer-to-Peer:** Adjacent intersections share their **Pressure Vectors** peer-to-peer over local ethernet or RF without routing through the cloud.
+- Enables **Green Waves**: The AI proactively clears a corridor ahead of incoming heavy congestion or emergency vehicles. This lightweight "Message Passing" protocol ensures the system works even on 4G/low-bandwidth local meshes.
+
+### 6. City Dashboard App (Full Stack)
+
+- A centralized control room pulling low-bandwidth telemetry.
+- Built with **Next.js**, UI for visualization, Live Traffic Stats, Edge Agent health alerts, and manual agent state control if necessary.
+
 ---
 
-## 🛠️ Tech Stack
+## 🏆 Competitive Advantage (USP)
 
--   **AI / Reinforcement Learning:** Python, TensorFlow, Keras
--   **Simulation:** SUMO (Simulation of Urban MObility)
--   **Backend API:** Flask & Flask-CORS
--   **Frontend / Dashboard:** Next.js, React, Tailwind CSS
--   **Data Visualization:** Chart.js
+| Feature                    | Legacy Timers | Cloud "Smart" Systems | Intelli-Flow AI               |
+| :------------------------- | :------------ | :-------------------- | :---------------------------- |
+| **Traffic Adaptation**     | Static        | Reactive              | **DQN Driven Predictive**     |
+| **Network Dependency**     | Offline       | Online                | **Sovereign 100% Offline**    |
+| **Emergency Routing**      | No            | High Latency          | **Zero-Latency Multi-Modal**  |
+| **Asymptotic Scaling**     | Linear        | Exponential           | **Constant O(1)**             |
+| **Data Privacy & InfoSec** | No Data       | Streamed              | **Zero Video Uplink**         |
+| **BrownField Integration** | Baseline      | Requires Fibre        | **Frictionless Edge Bolt-On** |
+
+### Key Technological Pillars:
+
+- Sovereign Edge Compute
+- Native Traffic AI
+- Constant O(1) Asymptotic Scaling
+- Zero Video Uplink (High Privacy)
+- Frictionless Edge Bolt-On
 
 ---
 
-## 🚀 Getting Started
+## ✨ Future & Advanced Capabilities
 
-To get a local copy up and running, follow these simple steps.
+Intelli-Flow AI is built to expand into a complete Smart City Ecosystem:
+
+- **🚶 Pedestrian-Centric Optimization:** Dynamically adjusting crosswalk times based on pedestrian density detected via CV.
+- **🍃 Emission-Aware Routing:** Integrating sensors to detect high CO2 levels and "flushing" traffic from those zones to reduce local pollution spikes.
+- **Robustness via Domain Randomization:** Training models with injected "Observation Noise" to simulate camera lag, dust/fog occlusions, and sensor dropouts, ensuring safe decisions even with "fuzzy" real-world data.
+
+---
+
+## 🛠️ Tech Stack & Current Prototype
+
+This repository contains the core Deep Reinforcement Learning algorithms and dashboard interface prototyped over the **SUMO Simulator** for stress-testing under extreme Delhi-traffic scenarios.
+
+- **Edge Compute:** NVIDIA Jetson Nano, TensorRT, CUDA, Ubuntu (JetPack SDK)
+- **AI Core:** Python, TensorFlow / Keras (Multi-Agent DQN)
+- **Perception Vision:** YOLOv8
+- **Simulation Environment:** SUMO (Simulation of Urban MObility) & TraCI
+- **API & Networking:** Flask, Ethernet / Wired Connectivity, REST APIs
+- **City Dashboard:** Next.js 14, React 18, Tailwind CSS, TypeScript
+
+---
+
+## 🚀 Getting Started (Simulation Prototype)
+
+To run our Deep Reinforcement Learning model and interactive dashboard using the SUMO environment locally:
 
 ### Prerequisites
 
--   Python 3.8+
--   SUMO installed and the `SUMO_HOME` environment variable configured.
--   Node.js and npm (or yarn)
+- Python 3.8+
+- SUMO installed and the `SUMO_HOME` environment variable configured.
+- Node.js and npm
 
 ### Installation & Launch
 
-1.  **Clone the repository:**
-    ```sh
-    git clone [https://github.com/yash-Bansal10/Intelli-Flow-AI.git](https://github.com/yash-Bansal10/Intelli-Flow-AI.git)
-    cd Intelli-Flow-AI
-    ```
+1. **Clone the repository:**
 
-2.  **Set up the Python Backend:**
-    -   Navigate to the AI core directory:
-        ```sh
-        cd ai_core
-        ```
-    -   Create and activate a virtual environment:
-        ```sh
-        # On Windows
-        python -m venv venv
-        .\venv\Scripts\activate
-        ```
-    -   Install the required Python packages:
-        ```sh
-        pip install -r requirements.txt
-        ```
-    -   **Important:** Open `train.py` and `traffic_env.py` and update the `SUMO_CONFIG_PATH` variable to point to your local SUMO configuration file (`.sumocfg`).
-    -   Start the AI training script and backend server:
-        ```sh
-        python train.py
-        ```
+   ```sh
+   git clone https://github.com/yash-Bansal10/Intelli-Flow-AI.git
+   cd Intelli-Flow-AI
+   ```
 
-3.  **Set up the Frontend Dashboard:**
-    -   Open a **new terminal**.
-    -   Navigate to the frontend directory (you'll need to create this part or use the provided API server with a tool like Postman).
-    -   Install npm packages and run the development server:
-        ```sh
-        # Example for a Next.js dashboard
-        # cd frontend
-        # npm install
-        # npm run dev
-        ```
+2. **Launch the AI Core (Backend):**
 
-4.  **View the Dashboard:**
-    -   Open your browser and go to `http://localhost:3000` to see the live traffic simulation and AI performance.
+   ```sh
+   cd ai_core
+   python -m venv venv
+   # Windows: .\venv\Scripts\activate | Mac/Linux: source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+   _Note: Update `SUMO_CONFIG_PATH` if needed in `train.py` / `traffic_env.py`._
+
+   ```sh
+   python train.py
+   ```
+
+3. **Launch the City Dashboard (Frontend):**
+   Open a new terminal.
+
+   ```sh
+   cd traffic-dashboard_main
+   npm install
+   npm run dev
+   ```
+
+4. **Monitor the Flow:**
+   Navigate to `http://localhost:3000` to view the AI's training process and live response within the SUMO interactive simulator.
 
 ---
 
-## 🔮 Future Scope
+## 📚 References & Research Papers
 
--   **Multi-Agent Systems:** Expand from a single intersection to a network of coordinated AI agents that manage traffic across an entire city grid.
--   **Predictive Analytics:** Integrate real-world data sources (weather, public events, GPS data) to anticipate traffic surges before they happen.
--   **Emergency Vehicle Prioritization:** Train the AI to recognize and create "green waves" for ambulances and fire trucks.
--   **Hardware Deployment:** Optimize the model to run on low-cost edge devices (like NVIDIA Jetson or Raspberry Pi) for real-world deployment.
-
----
-
-## 🤝 Contributing
-
-Contributions, issues, and feature requests are welcome! Feel free to check the issues page.
+- **Multi-Agent Reinforcement Learning:** [arXiv:2505.14544v3](https://arxiv.org/html/2505.14544v3)
+- **Max Pressure Algorithm:** [arXiv:2202.03290](https://arxiv.org/pdf/2202.03290)
+- **Deep Q-Network:** [arXiv:1711.07478](https://arxiv.org/pdf/1711.07478)
+- **Real Time Object Detection:** [ScienceDirect](https://www.sciencedirect.com/science/article/pii/S1110016825003850)
 
 ---
 
-## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-## 👨‍💻 Founder
-
-**Yash Bansal**
-
--   **LinkedIn:** [https://www.linkedin.com/in/iamyashbansal/](https://www.linkedin.com/in/iamyashbansal/)
