@@ -3,10 +3,12 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
+from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.optimizers import Adam
 from collections import deque
 import random
+import json
+import os
 
 class DQNAgent:
     def __init__(self, state_size, action_size):
@@ -21,10 +23,17 @@ class DQNAgent:
         self.model = self._build_model()
 
     def _build_model(self):
-        model = Sequential()
-        model.add(Dense(24, input_dim=self.state_size, activation='relu'))
-        model.add(Dense(24, activation='relu'))
-        model.add(Dense(self.action_size, activation='linear'))
+        """
+        [Day 3: Future-Proof Architecture]
+        Uses named layers to allow partial weight loading even if inputs change later.
+        """
+        print(f"Building USV model with input_dim={self.state_size}")
+        model = Sequential([
+            Input(shape=(self.state_size,), name="usv_input"),
+            Dense(64, activation='relu', name="hidden_1"),
+            Dense(64, activation='relu', name="hidden_2"),
+            Dense(self.action_size, activation='linear', name="output_layer")
+        ])
         model.compile(loss='mse', optimizer=Adam(learning_rate=self.learning_rate))
         return model
 
@@ -34,56 +43,65 @@ class DQNAgent:
     def act(self, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        act_values = self.model.predict(state)
+        act_values = self.model.predict(state, verbose=0)
         return np.argmax(act_values[0])
 
     def replay(self, batch_size):
         if len(self.memory) < batch_size:
-            return  # Not enough memory to replay
+            return
         
         minibatch = random.sample(self.memory, batch_size)
-
-        # 1. Get current Q-values for all states in the batch
-        states = np.array([i[0] for i in minibatch])
-        states = np.squeeze(states)
+        states = np.array([i[0] for i in minibatch]).squeeze()
+        next_states = np.array([i[3] for i in minibatch]).squeeze()
         current_q_values = self.model.predict_on_batch(states)
-
-        # 2. Get next Q-values for all next_states in the batch
-        next_states = np.array([i[3] for i in minibatch])
-        next_states = np.squeeze(next_states)
+    
         next_q_values = self.model.predict_on_batch(next_states)
-
-        X=[]
-        y=[]
-
-        # 3. Calculate target Q-values for each experience in the batch
-        for index,(state,action,reward,next_state,done) in enumerate(minibatch):
-            if not done:
-                new_q = reward + self.gamma * np.amax(next_q_values[index])
-            else:
-                new_q = reward
-
-            # Update the Q-value for the action that was taken
-            current_qs = current_q_values[index]
-            current_qs[action] = new_q
-            
+        X, y = [], []
+        for index, (state, action, reward, next_state, done) in enumerate(minibatch):
+            new_q = reward if done else reward + self.gamma * np.amax(next_q_values[index])
+            target_f = current_q_values[index]
+            target_f[action] = new_q
             X.append(state)
-            y.append(current_qs)
-
-
-        # 4. Fit the model on t(he entire batch at once
+            y.append(target_f)
         self.model.fit(np.array(X).squeeze(), np.array(y), batch_size=batch_size, epochs=1, verbose=0)
 
         if self.epsilon > self.epsilon_min:
             self.epsilon *= self.epsilon_decay
-        
-
+            
     def save(self, name):
-        """Saves the neural network's weights to a file."""
-        self.model.save_weights(name)
+        """Saves weights and epsilon to the models/ directory."""
+        if not os.path.exists("models"):
+            os.makedirs("models")
+        
+        path = os.path.join("models", name)
+        self.model.save_weights(path)
+        
+        meta_path = path.replace(".weights.h5", ".json")
+        with open(meta_path, 'w') as f:
+            json.dump({"epsilon": self.epsilon}, f)
 
     def load(self, name):
-        """Loads the neural network's weights from a file."""
-        self.model.load_weights(name)
+        """
+        Robust loader that attempts to load weights from the models/ directory.
+        """
+        path = os.path.join("models", name)
+        if not os.path.exists(path):
+            if os.path.exists(name): path = name
+            else: return
 
-    
+        try:
+            # Load with skip_mismatch=True to allow partial loading if state size changes
+            self.model.load_weights(path, by_name=True, skip_mismatch=True)
+            print(f"Loaded weights from {path}")
+        except Exception as e:
+            print(f"Note: Could not perform full load from {path}. Starting fresh or partial.")
+
+        meta_path = path.replace(".weights.h5", ".json")
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, 'r') as f:
+                    data = json.load(f)
+                    self.epsilon = data.get("epsilon", self.epsilon)
+                    print(f"Restored Epsilon: {self.epsilon:.4f}")
+            except:
+                pass
