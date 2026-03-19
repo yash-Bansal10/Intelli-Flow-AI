@@ -121,8 +121,6 @@
     @apply border-border outline-ring/50;
   }
   body {
-    /* Temporarily use direct colors to ensure visibility */
-    background-color: white !important; /* Forces a white background */
-    color: black !important; /* Forces black text */
+    /* Base text colors managed by NextThemes / Tailwind classes */
   }
 }
