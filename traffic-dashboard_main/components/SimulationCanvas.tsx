@@ -31,8 +31,8 @@ export function SimulationCanvas({ onNodeClick, isEmergencyActive }: SimulationC
   const ambulanceRoute = ["J1", "J5", "J3"]
 
   return (
-    <div className="w-full h-full min-h-[500px] lg:h-[700px] bg-slate-100 rounded-3xl border border-slate-200 overflow-hidden relative shadow-inner">
-      <svg className="w-full h-full" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
+    <div className="w-full h-full min-h-[500px] lg:h-[700px] bg-slate-50/60 backdrop-blur-3xl rounded-[2.5rem] border border-slate-200/50 overflow-hidden relative shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.08)] transition-all duration-500">
+      <svg className="w-full h-full drop-shadow-md" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
         {/* Draw Normal Edges */}
         {EDGES.map((edge, i) => {
           const fromNode = JUNC_POSITIONS[edge.from as keyof typeof JUNC_POSITIONS]
@@ -62,10 +62,13 @@ export function SimulationCanvas({ onNodeClick, isEmergencyActive }: SimulationC
             strokeWidth="12"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="drop-shadow-[0_0_20px_rgba(239,68,68,1)]"
+            initial={{ pathLength: 0, opacity: 0 }}
+            animate={{ pathLength: 1, opacity: [0.6, 1, 0.6] }}
+            transition={{ 
+              pathLength: { duration: 1.5, ease: "easeOut" },
+              opacity: { duration: 1.5, repeat: Infinity, ease: "easeInOut" }
+            }}
           />
         )}
 
@@ -94,15 +97,14 @@ export function SimulationCanvas({ onNodeClick, isEmergencyActive }: SimulationC
               cx={pos.cx}
               cy={pos.cy}
               r="24"
-              fill="#1e293b"
-              className="group-hover:fill-indigo-600 transition-colors"
+              className="fill-slate-800 transition-all duration-300 group-hover:fill-indigo-500 group-hover:scale-[1.15] drop-shadow-[0_0_8px_rgba(59,130,246,0.2)] group-hover:drop-shadow-[0_0_20px_rgba(99,102,241,0.7)] animate-[pulse_4s_ease-in-out_infinite]"
+              style={{ transformOrigin: `${pos.cx}px ${pos.cy}px` }}
             />
             <circle
               cx={pos.cx}
               cy={pos.cy}
               r="10"
-              fill="#22c55e"
-              className={isEmergencyActive && ambulanceRoute.includes(id) ? "fill-red-500 animate-pulse" : ""}
+              className={isEmergencyActive && ambulanceRoute.includes(id) ? "fill-red-500 animate-pulse drop-shadow-[0_0_10px_rgba(239,68,68,0.8)]" : "fill-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"}
             />
             <text
               x={pos.cx}

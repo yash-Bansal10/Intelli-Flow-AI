@@ -1,79 +1,87 @@
 "use client"
 
-import { AlertCircle, Cpu, Camera, BarChart2 } from "lucide-react"
+import { motion } from "framer-motion"
+import { Cpu, Activity, Network } from "lucide-react"
 
 export function ProjectOverview() {
   return (
-    <div className="relative w-full rounded-3xl overflow-hidden bg-gradient-to-br from-blue-50/80 via-white to-cyan-50/80 p-6 sm:p-10 shadow-sm border border-blue-100/50 mb-0">
-      {/* Abstract Background Blobs for depth */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-200/30 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-200/30 rounded-full blur-[70px] translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
+    <div className="relative w-full mb-4 z-20" style={{ perspective: 2500 }}>
+      {/* Abstract Background Blobs - Hybrid Twilight Theme */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/15 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 pointer-events-none"></div>
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-500/15 rounded-full blur-[70px] translate-y-1/3 -translate-x-1/4 pointer-events-none"></div>
 
-      {/* Frosted Glass Card */}
-      <div className="relative z-10 bg-white/70 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-2xl p-8 lg:p-10 max-w-5xl mx-auto transition-all duration-500 hover:shadow-[0_8px_40px_rgb(0,0,0,0.08)]">
+      <motion.div 
+        animate={{ rotateY: [0, 360] }}
+        transition={{ 
+          duration: 18, 
+          repeat: Infinity, 
+          ease: "linear" 
+        }} 
+        style={{ transformStyle: "preserve-3d" }}
+        className="relative z-10 w-full max-w-5xl h-[280px] sm:h-[320px] mx-auto group"
+      >
         
-        {/* Title */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-800 inline-block relative">
-            Project Overview
-            <span className="absolute -bottom-2 left-0 w-full h-1.5 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full opacity-80"></span>
+        {/* --- FRONT FACE (Twilight "Not too dark, not too light" frosted glass) --- */}
+        <div 
+          className="absolute inset-0 w-full h-full bg-slate-700/40 backdrop-blur-2xl border border-slate-300/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2.5rem] p-8 lg:p-12 flex flex-col justify-center items-center text-center"
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(1px)" }}
+        >
+          {/* Subtle inner reflection line */}
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+
+          {/* Top Right Label */}
+          <div className="absolute top-6 right-8 text-slate-300 text-[10px] sm:text-xs font-semibold tracking-widest uppercase">
+            Smart Traffic System
+          </div>
+
+          <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6 mt-4">
+            <span className="bg-gradient-to-r from-blue-300 via-cyan-300 to-indigo-300 bg-clip-text text-transparent drop-shadow-md">
+              Intelli-Flow AI
+            </span>
           </h2>
+
+          <p className="text-base sm:text-lg lg:text-xl text-slate-100 font-medium leading-relaxed max-w-2xl drop-shadow-sm">
+            An AI-powered smart traffic optimization system using DQN, real-time telemetry, and intelligent signal control.
+          </p>
         </div>
 
-        {/* Content Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10">
-          
-          {/* Problem Statement */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-rose-500 font-bold tracking-wide">
-              <div className="p-2.5 bg-rose-50 rounded-xl shadow-sm border border-rose-100/50"><AlertCircle className="w-5 h-5" /></div>
-              Problem Statement
-            </div>
-            <p className="text-slate-600 leading-relaxed text-sm font-medium">
-              Traditional traffic systems rely on fixed timers and outdated loops, leading to severe rush-hour congestion, compounded carbon emissions, and extremely dangerous delays for emergency responders actively en route.
-            </p>
-          </div>
+        {/* --- BACK FACE --- */}
+        <div 
+          className="absolute inset-0 w-full h-full bg-slate-700/40 backdrop-blur-2xl border border-slate-300/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2.5rem] p-8 lg:p-12 flex flex-col justify-center items-center"
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(1px)" }}
+        >
+          {/* Subtle inner reflection line */}
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
 
-          {/* Solution */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-emerald-500 font-bold tracking-wide">
-              <div className="p-2.5 bg-emerald-50 rounded-xl shadow-sm border border-emerald-100/50"><Cpu className="w-5 h-5" /></div>
-              AI-Driven Solution
-            </div>
-            <p className="text-slate-600 leading-relaxed text-sm font-medium">
-              Intelli-Flow utilizes Deep Q-Networks (DQN) continuously trained on live telemetry data to dynamically optimize signal phases. It prioritizes overall throughput while guaranteeing immediate green-corridors for emergency vehicles.
-            </p>
-          </div>
+          <h2 className="text-2xl sm:text-3xl tracking-widest uppercase font-bold text-slate-100 mb-8 mt-2 drop-shadow-sm">
+            System Topology
+          </h2>
 
-          {/* Key Components */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-blue-500 font-bold tracking-wide">
-              <div className="p-2.5 bg-blue-50 rounded-xl shadow-sm border border-blue-100/50"><Camera className="w-5 h-5" /></div>
-              Key Architecture
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 w-full max-w-3xl">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-500/20 border border-indigo-300/30 flex items-center justify-center text-indigo-300 shadow-sm">
+                <Network className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <p className="text-slate-200 font-medium text-xs sm:text-base">IoT Edge Mesh</p>
             </div>
-            <ul className="text-slate-600 space-y-2.5 text-sm font-medium">
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span> SUMO TraCI Simulation Engine</li>
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span> Deep Q-Network (DQN) Multi-Agent System</li>
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span> YOLOv8 Computer Vision Pipeline</li>
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.8)]"></span> ESP32 & IoT Edge Infrastructure</li>
-            </ul>
-          </div>
 
-          {/* Features */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 text-indigo-500 font-bold tracking-wide">
-              <div className="p-2.5 bg-indigo-50 rounded-xl shadow-sm border border-indigo-100/50"><BarChart2 className="w-5 h-5" /></div>
-              Core Features
+            <div className="flex flex-col items-center text-center space-y-3">
+               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-cyan-500/20 border border-cyan-300/30 flex items-center justify-center text-cyan-300 shadow-sm">
+                <Cpu className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <p className="text-slate-200 font-medium text-xs sm:text-base">DQN Inference</p>
             </div>
-            <ul className="text-slate-600 space-y-2.5 text-sm font-medium">
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span> Smart Signal Phase Control</li>
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span> Active Emergency Corridor Rendering</li>
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span> Live Impact Analytics & Reporting</li>
-              <li className="flex items-center gap-3"><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)]"></span> Zero-Trust HMAC Endpoint Security</li>
-            </ul>
+
+            <div className="flex flex-col items-center text-center space-y-3">
+               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-500/20 border border-emerald-300/30 flex items-center justify-center text-emerald-300 shadow-sm">
+                <Activity className="w-6 h-6 sm:w-8 sm:h-8" />
+              </div>
+              <p className="text-slate-200 font-medium text-xs sm:text-base">Live Telemetry</p>
+            </div>
           </div>
         </div>
-      </div>
+
+      </motion.div>
     </div>
   )
 }
