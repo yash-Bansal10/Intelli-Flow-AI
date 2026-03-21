@@ -31,7 +31,7 @@ export function SimulationCanvas({ onNodeClick, isEmergencyActive }: SimulationC
   const ambulanceRoute = ["J1", "J5", "J3"]
 
   return (
-    <div className="w-full h-full min-h-[500px] lg:h-[700px] bg-slate-50/60 backdrop-blur-3xl rounded-[2.5rem] border border-slate-200/50 overflow-hidden relative shadow-[0_8px_32px_rgba(0,0,0,0.04)] hover:shadow-[0_8px_40px_rgba(0,0,0,0.08)] transition-all duration-500">
+    <div className="w-full h-full bg-slate-50 flex items-center justify-center overflow-hidden relative transition-all duration-500">
       <svg className="w-full h-full drop-shadow-md" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid meet">
         {/* Draw Normal Edges */}
         {EDGES.map((edge, i) => {
