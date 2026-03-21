@@ -23,7 +23,7 @@ export function ProjectOverview() {
         
         {/* --- FRONT FACE (Twilight "Not too dark, not too light" frosted glass) --- */}
         <div 
-          className="absolute inset-0 w-full h-full bg-slate-700/40 backdrop-blur-2xl border border-slate-300/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2.5rem] p-8 lg:p-12 flex flex-col justify-center items-center text-center"
+          className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-black/90 backdrop-blur-2xl border border-slate-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-[2.5rem] p-8 lg:p-12 flex flex-col justify-center items-center text-center"
           style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "translateZ(1px)" }}
         >
           {/* Subtle inner reflection line */}
@@ -47,7 +47,7 @@ export function ProjectOverview() {
 
         {/* --- BACK FACE --- */}
         <div 
-          className="absolute inset-0 w-full h-full bg-slate-700/40 backdrop-blur-2xl border border-slate-300/20 shadow-[0_8px_32px_rgba(0,0,0,0.12)] rounded-[2.5rem] p-8 lg:p-12 flex flex-col justify-center items-center"
+          className="absolute inset-0 w-full h-full bg-gradient-to-br from-slate-900/90 via-slate-800/80 to-black/90 backdrop-blur-2xl border border-slate-700/50 shadow-[0_8px_32px_rgba(0,0,0,0.5)] rounded-[2.5rem] p-8 lg:p-12 flex flex-col justify-center items-center"
           style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg) translateZ(1px)" }}
         >
           {/* Subtle inner reflection line */}

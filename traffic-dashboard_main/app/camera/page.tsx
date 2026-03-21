@@ -13,10 +13,10 @@ export default function CameraFeed() {
   }
 
   const laneData = [
-    { name: "North Bound", count: 12, pressure: 65, avgWait: "42s", icon: <ArrowUp className="w-4 h-4" /> },
-    { name: "South Bound", count: 8, pressure: 40, avgWait: "21s", icon: <ArrowDown className="w-4 h-4" /> },
-    { name: "East Bound", count: 24, pressure: 92, avgWait: "115s", icon: <ArrowRight className="w-4 h-4" /> },
-    { name: "West Bound", count: 3, pressure: 15, avgWait: "8s", icon: <ArrowLeft className="w-4 h-4" /> },
+    { name: "North Bound", count: 12, pressure: 65, avgWait: "42s", colorClass: "bg-blue-500", icon: <ArrowUp className="w-4 h-4" /> },
+    { name: "South Bound", count: 8, pressure: 40, avgWait: "21s", colorClass: "bg-emerald-500", icon: <ArrowDown className="w-4 h-4" /> },
+    { name: "East Bound", count: 24, pressure: 92, avgWait: "115s", colorClass: "bg-amber-500", icon: <ArrowRight className="w-4 h-4" /> },
+    { name: "West Bound", count: 3, pressure: 15, avgWait: "8s", colorClass: "bg-[#8b5cf6]", icon: <ArrowLeft className="w-4 h-4" /> },
   ]
 
   return (
@@ -55,13 +55,13 @@ export default function CameraFeed() {
           {/* OSD (On-Screen Display) Overlays */}
           <div className="absolute top-4 left-4 bg-black/60 backdrop-blur-md border border-white/10 p-3 rounded-lg text-white">
             <div className="text-xs uppercase tracking-wider text-slate-400 mb-1 font-semibold">Phase Status</div>
-            <div className="text-xl font-bold text-emerald-400">{phaseData.current}</div>
+            <div className="text-xl font-bold text-sky-400">{phaseData.current}</div>
             <div className="text-sm font-mono text-slate-300">Elapsed: {phaseData.elapsed}</div>
           </div>
 
           <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md border border-white/10 p-3 rounded-lg text-white">
             <div className="text-xs uppercase tracking-wider text-slate-400 mb-1 font-semibold">DQN Engine</div>
-            <div className="text-xl font-bold text-indigo-400">Action: {phaseData.dqnAction}</div>
+            <div className="text-xl font-bold text-sky-400">Action: {phaseData.dqnAction}</div>
             <div className="text-sm font-mono text-slate-300">Q:[{phaseData.qValues.join(', ')}]</div>
           </div>
           
@@ -99,9 +99,7 @@ export default function CameraFeed() {
                   </div>
                   <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                     <div 
-                      className={`h-2.5 rounded-full ${
-                        lane.pressure > 80 ? 'bg-red-500' : lane.pressure > 50 ? 'bg-amber-500' : 'bg-emerald-500'
-                      }`} 
+                      className={`h-2.5 rounded-full ${lane.colorClass}`} 
                       style={{ width: `${lane.pressure}%` }}
                     ></div>
                   </div>

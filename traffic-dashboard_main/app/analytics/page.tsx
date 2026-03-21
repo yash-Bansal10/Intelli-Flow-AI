@@ -11,7 +11,7 @@ import { NumberTicker } from "@/components/NumberTicker"
 export default function AnalyticsPage() {
   const metricCards = [
     { title: "Wait Time Reduction", numeric: 34.2, suffix: "%", icon: <TrendingUp className="w-6 h-6 text-sky-500" />, subtext: "-2m 14s avg per vehicle" },
-    { title: "CO₂ Emissions Prevented", numeric: 128.4, suffix: "t", icon: <Leaf className="w-6 h-6 text-emerald-500" />, subtext: "Equivalent to 6.2k trees" },
+    { title: "CO₂ Emissions Prevented", numeric: 128.4, suffix: "t", icon: <Leaf className="w-6 h-6 text-sky-400" />, subtext: "Equivalent to 6.2k trees" },
     { title: "Fuel Saved (Daily)", numeric: 4250, suffix: "L", icon: <Droplets className="w-6 h-6 text-amber-500" />, subtext: "Idling reduction at intersections" },
     { title: "Lives Protected (Est)", numeric: 14, suffix: "", icon: <HeartPulse className="w-6 h-6 text-rose-500" />, subtext: "Via ambulance green-corridors" },
   ]
@@ -109,7 +109,7 @@ export default function AnalyticsPage() {
             <div className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-3 tracking-tight">
               <NumberTicker value={card.numeric} suffix={card.suffix} decimals={card.numeric % 1 !== 0 ? 1 : 0} />
             </div>
-            <div className="text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-100 inline-block px-2.5 py-1 rounded-md">
+            <div className="text-xs font-bold text-sky-500 bg-sky-50 border border-sky-100 inline-block px-2.5 py-1 rounded-md">
               {card.subtext}
             </div>
           </motion.div>
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
               <h3 className="text-xl font-bold text-slate-800 mb-1">DQN Training Convergence</h3>
               <p className="text-sm text-slate-500">Reinforcement learning cumulative rewards</p>
             </div>
-            <div className="px-3 py-1 bg-emerald-50 border border-emerald-100 text-emerald-600 text-xs font-bold rounded-full">
+            <div className="px-3 py-1 bg-sky-50 border border-sky-100 text-sky-500 text-xs font-bold rounded-full">
               Converged
             </div>
           </div>
@@ -169,10 +169,10 @@ export default function AnalyticsPage() {
                   type="natural" 
                   dataKey="reward" 
                   name="Accumulated Avg Reward"
-                  stroke="#10b981" 
+                  stroke="#38bdf8" 
                   strokeWidth={4} 
                   dot={false}
-                  activeDot={{ r: 8, fill: "#10b981", stroke: "#fff", strokeWidth: 3 }} 
+                  activeDot={{ r: 8, fill: "#38bdf8", stroke: "#fff", strokeWidth: 3 }} 
                   isAnimationActive={true}
                   animationEasing="ease-out"
                   animationDuration={2000}

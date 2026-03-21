@@ -15,7 +15,7 @@ export function HealthMonitor() {
   const metrics: { title: string, icon: JSX.Element, stats: MetricStat[] }[] = [
     {
       title: "DQN Agent",
-      icon: <Activity className="w-5 h-5 text-indigo-500" />,
+      icon: <Activity className="w-5 h-5 text-orange-400" />,
       stats: [
         { label: "Inference", numeric: 12, suffix: "ms" },
         { label: "Last Action", value: "SWITCH" },
@@ -23,7 +23,7 @@ export function HealthMonitor() {
     },
     {
       title: "ESP32-CAM",
-      icon: <Camera className="w-5 h-5 text-sky-500" />,
+      icon: <Camera className="w-5 h-5 text-orange-400" />,
       stats: [
         { label: "Stream FPS", numeric: 24.5, decimals: 1 },
         { label: "Latency", numeric: 85, suffix: "ms" },
@@ -31,7 +31,7 @@ export function HealthMonitor() {
     },
     {
       title: "INMP441 Mic",
-      icon: <Mic className="w-5 h-5 text-emerald-500" />,
+      icon: <Mic className="w-5 h-5 text-orange-400" />,
       stats: [
         { label: "Audio", numeric: -12, suffix: "dB" },
         { label: "Siren Conf.", numeric: 2, suffix: "%" },
@@ -39,7 +39,7 @@ export function HealthMonitor() {
     },
     {
       title: "ESP32 Controller",
-      icon: <Cpu className="w-5 h-5 text-orange-500" />,
+      icon: <Cpu className="w-5 h-5 text-orange-400" />,
       stats: [
         { label: "GPIO", value: "OK" },
         { label: "Uptime", value: "14d 2h" },
@@ -47,7 +47,7 @@ export function HealthMonitor() {
     },
     {
       title: "OLED display",
-      icon: <Tv className="w-5 h-5 text-violet-500" />,
+      icon: <Tv className="w-5 h-5 text-orange-400" />,
       stats: [
         { label: "State", value: "Active" },
         { label: "Refresh", numeric: 60, suffix: "Hz" },
@@ -55,7 +55,7 @@ export function HealthMonitor() {
     },
     {
       title: "Watchdog",
-      icon: <Watch className="w-5 h-5 text-rose-500" />,
+      icon: <Watch className="w-5 h-5 text-orange-400" />,
       stats: [
         { label: "Heartbeat", value: "Active" },
         { label: "Mode", value: "Primary" },
