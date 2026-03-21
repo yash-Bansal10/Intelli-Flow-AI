@@ -5,51 +5,55 @@ import traci
 import numpy as np
 import sys
 import os
+import time
+import random
 
 # Day 1: Fix imports for cross-directory execution
 script_dir = os.path.dirname(os.path.abspath(__file__))
 if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
-from api_server import start_api_thread, update_live_data 
+from api_server import start_api_thread, update_live_data, get_emergency_status, clear_emergency, get_spawn_requests, add_emergency
 
-# Day 4: IRC Standard PCU Mapping (Simulation-Agnostic)
-# These keys map directly to SUMO vehicle type IDs (vType)
+# Day 4: PCU Mapping (Simulation-Agnostic)
 PCU_MAP = {
-    "passenger": 1.0,      # Car/Van
-    "bus": 3.7,            # Bus/Truck
-    "truck": 3.7,
-    "trailer": 5.0,        # Tractor-Trailer
-    "motorcycle": 0.8,     # Two-Wheeler
-    "enfield": 0.8,        # Indian motorcycle (Day 4 XML)
-    "moped": 0.8,
-    "bicycle": 0.5,
-    "auto_rickshaw": 2.0,  # Custom type for India
-    "bajaj": 2.0,          # Indian auto-rickshaw (Day 4 XML)
-    "tram": 3.0,
-    "pedestrian": 0.0      # Safety: Pedestrians don't add road 'pressure'
+    "passenger": 1.0, "bus": 3.7, "truck": 3.7, "trailer": 5.0,
+    "motorcycle": 0.8, "enfield": 0.8, "moped": 0.8, "bicycle": 0.5,
+    "auto_rickshaw": 2.0, "bajaj": 2.0, "tram": 3.0, "pedestrian": 0.0
 }
 
 class TrafficEnv:
-    def __init__(self, junction_ids=None, use_gui=True):
+    def __init__(self, use_gui=True, map_name="4X4_grid", junction_ids=None):
         if 'SUMO_HOME' in os.environ:
-            tools = os.path.join(os.environ['SUMO_HOME'], 'tools')
-            sys.path.append(tools)
+            sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
         else:
             sys.exit("please declare environment variable 'SUMO_HOME'")
         
-        # ----- Start the API Server in the background thread ----
+
+        
         start_api_thread()
 
         self.use_gui = use_gui
         self.sumoBinary = "sumo-gui" if use_gui else "sumo"
         
-        # Day 1: Robust Path Resolution
+        
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        config_path = os.path.join(script_dir, "agra.sumocfg")
+        map_path = os.path.join(script_dir, "simulations", map_name)
+        
+        if not os.path.exists(map_path):
+            sys.exit(f"Error: Map folder '{map_name}' not found")
+
+        configs = [f for f in os.listdir(map_path) if f.endswith(".sumocfg")]
+        if not configs:
+            sys.exit(f"Error: No .sumocfg file found in {map_path}")
+        
+        config_path = os.path.join(map_path, configs[0])
+        print(f"[Intelli-Flow] Loading Map: {map_name} ({configs[0]})")
+        
+        
         self.sumo_args = ["-c", config_path, "--start", "--quit-on-end"]
         
-        # Performance Optimization: Disable GUI logs if in non-gui mode
+        
         if not use_gui:
             self.sumo_args.append("--no-step-log")
             self.sumo_args.append("--no-warnings")
@@ -57,99 +61,91 @@ class TrafficEnv:
         traci.start([self.sumoBinary] + self.sumo_args)
         
         self.current_step = 0
-        self.max_steps = 500 
-        self.frame_skip = 5 # Performance: AI only 'thinks' every 5 seconds
-        
-        # Performance: Subscription & Caching
+        self.max_steps = 2500 
+        self.frame_skip = 5 
         self.lane_pcu_cache = {}
-        self.vehicle_type_cache = {} # Day 4: vid -> type mapping (static)
         
-        # Day 2: Autonomous Junction Discovery (Zero-Hardcoding)
         if junction_ids is None:
             self.junction_ids = traci.trafficlight.getIDList()
-            print(f"[Intelli-Flow] Autonomous Discovery: Found {len(self.junction_ids)} junctions: {self.junction_ids}")
+            print(f"[Intelli-Flow] Autonomous Discovery: Found {len(self.junction_ids)} junctions")
         else:
             self.junction_ids = junction_ids
-
+            
+        self.junction_pos = {}
+        for jid in self.junction_ids:
+            self.junction_pos[jid] = self._get_junction_pos(jid)
+            
+        self.neighbors = self._build_spatial_map()
+        
         self.junction_lanes = {}
-        self.junction_states = {} # Tracks phase and time_in_phase for each junction
+        self.junction_states = {}
         
         for jid in self.junction_ids:
             self.junction_lanes[jid] = self._discover_lanes(jid)
-            
-            # Day 3: Dynamic Phase Discovery (Zero-Hardcoding)
             phases_map = self._discover_phases(jid)
-            
             self.junction_states[jid] = {
-                "phase": phases_map["NS"], # Start on NS Green
+                "phase": phases_map["NS"][0], # Start with the first NS phase
                 "time_in_phase": 0,
                 "min_phase_time": 10,
                 "phases_map": phases_map
             }
         
-        # Day 3: Spatial Neighbor Discovery (Run Once at Startup)
+        
         self.neighbors = self._build_spatial_map()
-
-        # Day 4 Performance: TraCI Subscriptions
-        # We tell SUMO to proactively push lane vehicle IDs to us
+        
         self._setup_subscriptions()
-
-        # For backward compatibility with single-agent scripts
+        
         self.main_jid = self.junction_ids[0]
+        self.colored_edges = set() 
+        self.all_edges = traci.edge.getIDList()
+        self.ambulance_spawn_chance = 0.005 # Day 8: Adjust for frequency of random calls
+
+    def get_emergency_status(self):
+        """Proxy method for training script to check API status."""
+        return get_emergency_status()
+
+    def _get_junction_pos(self, jid):
+        try:
+            return traci.junction.getPosition(jid)
+        except traci.exceptions.TraCIException:
+            lanes = traci.trafficlight.getControlledLanes(jid)
+            if lanes:
+                shape = traci.lane.getShape(lanes[0])
+                return shape[-1] 
+            return (0, 0)
 
     def _build_spatial_map(self):
-        """
-        Dynamically calculates N, S, E, W neighbors mapping using GPS coordinates.
-        This runs once during init, making the AI simulation-agnostic.
-        """
-        coords = {}
+        self.junction_pos = {}
         for jid in self.junction_ids:
-            # Get X, Y coordinates from TraCI
-            # Note: SUMO uses Cartesian coordinates where higher Y is North, higher X is East
-            x, y = traci.junction.getPosition(jid)
-            coords[jid] = (x, y)
+            self.junction_pos[jid] = self._get_junction_pos(jid)
             
         neighbors_map = {}
-        for jid, (x, y) in coords.items():
+        
+        for jid, (x, y) in self.junction_pos.items():
             neighbors_map[jid] = {'N': None, 'S': None, 'E': None, 'W': None}
             
-            # Find closest junction in each direction
+            
             min_dists = {'N': float('inf'), 'S': float('inf'), 'E': float('inf'), 'W': float('inf')}
             
-            for other_jid, (ox, oy) in coords.items():
+            for other_jid, (ox, oy) in self.junction_pos.items():
                 if jid == other_jid: continue
-                
-                dx = ox - x
-                dy = oy - y
+                dx, dy = ox - x, oy - y
                 dist = (dx**2 + dy**2)**0.5
+
                 
-                # Determine primary direction based on angle
-                # On this specific SUMO network mapping:
-                # North (A is above B): X decreases (dx < 0)
-                # South (C is below B): X increases (dx > 0)
-                # West  (1 is left of 2): Y decreases (dy < 0)
-                # East  (3 is right of 2): Y increases (dy > 0)
                 
                 if dx < 0 and abs(dx) > abs(dy) and dist < min_dists['N']:
-                    neighbors_map[jid]['N'] = other_jid
-                    min_dists['N'] = dist
+                    neighbors_map[jid]['N'], min_dists['N'] = other_jid, dist
                 elif dx > 0 and abs(dx) > abs(dy) and dist < min_dists['S']:
-                    neighbors_map[jid]['S'] = other_jid
-                    min_dists['S'] = dist
+                    neighbors_map[jid]['S'], min_dists['S'] = other_jid, dist
                 elif dy > 0 and abs(dy) >= abs(dx) and dist < min_dists['E']:
-                    neighbors_map[jid]['E'] = other_jid
-                    min_dists['E'] = dist
+                    neighbors_map[jid]['E'], min_dists['E'] = other_jid, dist
                 elif dy < 0 and abs(dy) >= abs(dx) and dist < min_dists['W']:
-                    neighbors_map[jid]['W'] = other_jid
-                    min_dists['W'] = dist
-                    
+                    neighbors_map[jid]['W'], min_dists['W'] = other_jid, dist
         return neighbors_map
 
     def _setup_subscriptions(self):
-        """
-        Subscribes to all relevant lanes. This replaces hundred of individual 
-        getLastStepVehicleIDs calls with a single bulk result package.
-        """
+        
         all_lanes = set()
         for jid in self.junction_ids:
             all_lanes.update(self.junction_lanes[jid]["incoming"])
@@ -158,284 +154,411 @@ class TrafficEnv:
                 n_id = self.neighbors[jid][d]
                 if n_id and n_id in self.junction_lanes:
                     all_lanes.update(self.junction_lanes[n_id]["incoming"])
-        
         for lane_id in all_lanes:
-            # Constants 0x12 (LAST_STEP_VEHICLE_ID_LIST)
             traci.lane.subscribe(lane_id, [0x12])
 
     def _discover_lanes(self, jid):
-        """Automatically discovers incoming and outgoing lanes for a junction."""
-        # Incoming/Controlled lanes
         incoming = list(dict.fromkeys(traci.trafficlight.getControlledLanes(jid)))
-        
-        # Outgoing lanes (where the junction leads to)
         links = traci.trafficlight.getControlledLinks(jid)
         outgoing = []
         for link in links:
-            for connection in link:
-                if connection:
-                    outgoing.append(connection[1]) # index 1 is 'to-lane'
-        outgoing = list(dict.fromkeys(outgoing))
-        
-        return {"incoming": incoming, "outgoing": outgoing}
+            for conn in link:
+                if conn: outgoing.append(conn[1])
+        return {"incoming": incoming, "outgoing": list(dict.fromkeys(outgoing))}
 
     def _discover_phases(self, jid):
-        """
-        Dynamically discovers the indices for the primary North-South and East-West Green phases.
-        This ensures the AI works on 4-phase, 8-phase, or 16-phase intersections without hardcoding.
-        """
         logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(jid)
-        if not logics:
-            return {"NS": 0, "EW": 2} # Fallback to standard 4-phase
-            
+        if not logics: return {"NS": [0], "EW": [2], "link_map": {}}
         phases = logics[0].phases
-        ns_index, ew_index = 0, 0
-        max_green_ns, max_green_ew = 0, 0
+        links = traci.trafficlight.getControlledLinks(jid)
         
-        for i, phase in enumerate(phases):
-            state = phase.state.lower()
-            # Count the number of green 'g' lights
-            green_count = state.count('g')
+        # Map each link index to a direction (NS or EW)
+        ns_links, ew_links = [], []
+        j_pos = self.junction_pos[jid]
+        
+        for i, link_set in enumerate(links):
+            if not link_set: continue
+            from_lane = link_set[0][0]
+            edge_id = traci.lane.getEdgeID(from_lane)
+            # Use geometry to determine direction
+            from_pos = traci.junction.getPosition(traci.edge.getFromJunction(edge_id))
+            dx, dy = abs(from_pos[0] - j_pos[0]), abs(from_pos[1] - j_pos[1])
+            if dy > dx: ns_links.append(i)
+            else: ew_links.append(i)
             
-            # Heuristic: the first longest green phase is usually NS, the second is EW.
-            # In complex SUMO intersections, NS is typically early (index 0), 
-            # and EW is exactly halfway through the cycle.
-            halfway = len(phases) // 2
+        ns_p, ew_p = [], []
+        for i, ph in enumerate(phases):
+            state = ph.state
+            # Check if this phase is a "Green" phase for NS or EW
+            # We exclude yellow phases (contain 'y') and all-red
+            if 'y' in state.lower(): continue
+            has_ns = any(state[idx].lower() == 'g' for idx in ns_links)
+            has_ew = any(state[idx].lower() == 'g' for idx in ew_links)
             
-            if i < halfway:
-                if green_count > max_green_ns:
-                    max_green_ns = green_count
-                    ns_index = i
-            else:
-                if green_count > max_green_ew:
-                    max_green_ew = green_count
-                    ew_index = i
-                    
-        return {"NS": ns_index, "EW": ew_index}
+            if has_ns and not has_ew: ns_p.append(i)
+            elif has_ew and not has_ns: ew_p.append(i)
+            
+        # Default fallbacks if discovery fails
+        if not ns_p: ns_p = [0]
+        if not ew_p: ew_p = [min(2, len(phases)-1)]
+        
+        return {
+            "NS": ns_p, 
+            "EW": ew_p, 
+            "link_info": {"ns": ns_links, "ew": ew_links, "links": links}
+        }
 
     def reset(self):
         traci.load(self.sumo_args)
         self.current_step = 0
         self.lane_pcu_cache = {}
+        self.colored_edges.clear()
         for jid in self.junction_ids:
-            self.junction_states[jid]["phase"] = 0
+            self.junction_states[jid]["phase"] = self.junction_states[jid]["phases_map"]["NS"]
             self.junction_states[jid]["time_in_phase"] = 0
         traci.simulationStep()
         return self._get_state()
 
     def get_lane_pcu_pressure(self, lane_id):
-        """
-        Calculates the weighted traffic volume using subscription results.
-        """
-        if lane_id in self.lane_pcu_cache:
-            return self.lane_pcu_cache[lane_id]
-
-        # Subscription Result Retrieval for this specific lane
+        if lane_id in self.lane_pcu_cache: return self.lane_pcu_cache[lane_id]
         res = traci.lane.getSubscriptionResults(lane_id)
-        if res:
-            vehicle_ids = res[0x12] # 0x12 = LAST_STEP_VEHICLE_ID_LIST
-        else:
-            vehicle_ids = traci.lane.getLastStepVehicleIDs(lane_id)
-            
-        total_pcu = 0.0
-        for vid in vehicle_ids:
-            # Speed & Type optimization: Use vehicle subscriptions
-            # (We subscribe to vehicles dynamically in _get_state)
-            v_res = traci.vehicle.getSubscriptionResults(vid)
-            
-            if v_res:
-                speed = v_res[0x40] # VAR_SPEED
-                vtype = v_res[0x4f].lower() # VAR_TYPE
-            else:
-                # Fallback (slow)
-                speed = traci.vehicle.getSpeed(vid)
-                vtype = traci.vehicle.getTypeID(vid).lower()
-                # Auto-subscribe for next step!
-                traci.vehicle.subscribe(vid, [0x40, 0x4f]) 
-
-            if speed < 0.1:
-                weight = 1.0
-                for key, val in PCU_MAP.items():
-                    if key in vtype:
-                        weight = val
-                        break
-                total_pcu += weight
-                
-        return total_pcu
+        vids = res[0x12] if res else traci.lane.getLastStepVehicleIDs(lane_id)
+        pcu = 0.0
+        for vid in vids:
+            try:
+                v_res = traci.vehicle.getSubscriptionResults(vid)
+                if v_res:
+                    s, vt = v_res[0x40], v_res[0x4f].lower()
+                else:
+                    s, vt = traci.vehicle.getSpeed(vid), traci.vehicle.getTypeID(vid).lower()
+                    traci.vehicle.subscribe(vid, [0x40, 0x4f])
+                if s < 0.1:
+                    w = 1.0
+                    for k, v in PCU_MAP.items():
+                        if k in vt: w = v; break
+                    pcu += w
+            except: continue
+        return pcu
 
     def get_neighbor_pressure(self, jid):
-        """
-        [Day 3: Spatial V2X] Calculates normalized PCU pressure using the dynamic map.
-        Returns 4 values [N, S, E, W].
-        """
-        neighbor_pressures = []
-        directions = ['N', 'S', 'E', 'W']
-        
-        for d in directions:
+        pres = []
+        for d in ['N', 'S', 'E', 'W']:
             n_id = self.neighbors[jid][d]
-            
             if n_id and n_id in self.junction_lanes:
-                lanes = self.junction_lanes[n_id]["incoming"]
-                # Day 4: Switched to weighted PCU pressure
-                pcu_sum = sum(self.get_lane_pcu_pressure(l) for l in lanes)
-                neighbor_pressures.append(pcu_sum / len(lanes) if lanes else 0.0)
-            else:
-                neighbor_pressures.append(0.0)
-                
-        return neighbor_pressures
+                l = self.junction_lanes[n_id]["incoming"]
+                p = sum(self.get_lane_pcu_pressure(lane) for lane in l)
+                pres.append(p / len(l) if l else 0.0)
+            else: pres.append(0.0)
+        return pres
 
     def _get_state(self):
-        """
-        [Day 3: Universal State Vector] Fixed 28-slot vector for Bharat Mandapam.
-        Optimized with TraCI Subscriptions and Frame Skipping.
-        """
         self.lane_pcu_cache = {}
-        # Fetching all active lanes once for this step
-        all_lanes = set()
+        all_e = get_emergency_status()
+        states = {}
         for jid in self.junction_ids:
-            all_lanes.update(self.junction_lanes[jid]["incoming"])
-            for d in ['N', 'S', 'E', 'W']:
-                n_id = self.neighbors[jid][d]
-                if n_id and n_id in self.junction_lanes:
-                    all_lanes.update(self.junction_lanes[n_id]["incoming"])
-        
-        # Pre-fill cache using lane subscriptions
-        for l in all_lanes:
-            self.lane_pcu_cache[l] = self.get_lane_pcu_pressure(l)
+            q = [self.get_lane_pcu_pressure(l) for l in self.junction_lanes[jid]["incoming"]]
+            q = (q + [0.0] * 12)[:12]
+            ph = [1 if self.junction_states[jid]["phase"] == self.junction_states[jid]["phases_map"]["NS"] else 0]
+            v = self.get_neighbor_pressure(jid)
+            evp = [1.0 if jid in all_e else 0.0, 0.0, 0.0, 0.0]
+            states[jid] = np.array(q + ph + v + evp + [0.5, 0.5, 1.0, 0.0, 1.0, 1.0, 1.0])
+        return states[self.main_jid] if len(self.junction_ids) == 1 else states
 
-        all_states = {}
-        for jid in self.junction_ids:
-            # 1. Local Queues [0-11] (Padded to 12 lanes)
-            # Day 4: Switched from raw counts to PCU Weighted Pressures
-            incoming = self.junction_lanes[jid]["incoming"]
-            queues = [self.get_lane_pcu_pressure(l) for l in incoming]
-            queues = (queues + [0.0] * 12)[:12] 
+    def _get_ambulance_phase(self, jid, route):
+        try:
+            p_map = self.junction_states[jid]["phases_map"]
+            links = p_map["link_info"]["links"]
             
-            # 2. Phase [12]
-            phase = [1 if self.junction_states[jid]["phase"] == self.junction_states[jid]["phases_map"]["NS"] else 0]
+            # Find which edge in the ambulance route is an incoming edge to this junction
+            incoming_edges = {traci.lane.getEdgeID(l) for l in self.junction_lanes[jid]["incoming"]}
+            amb_edge = next((e for e in route if e in incoming_edges), None)
+            if not amb_edge: return None
             
-            # 3. V2X Neighbors [13-16]
-            v2x = self.get_neighbor_pressure(jid)
+            target_indices = []
+            for i, link_set in enumerate(links):
+                if not link_set: continue
+                from_lane = link_set[0][0]
+                if traci.lane.getEdgeID(from_lane) == amb_edge:
+                    target_indices.append(i)
+                    
+            if not target_indices: return None
             
-            # 4. Emergency EVP Placeholders [17-20] (Empty)
-            evp = [0.0, 0.0, 0.0, 0.0]
+            logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(jid)
+            phases = logics[0].phases
             
-            # 5. Temporal Placeholders [21-22] (Normalized Time/Day)
-            temporal = [0.5, 0.5] 
-            
-            # 6. Environmental Placeholder [23] (Clear Weather = 1.0)
-            env_state = [1.0]
-            
-            # 7. PCU Context Placeholders [24-27]
-            # Day 4: Calculating Heavy Vehicle Ratio for better AI context
-            all_vids = []
-            for l in incoming: all_vids.extend(traci.lane.getLastStepVehicleIDs(l))
-            
-            heavy_count = 0
-            for vid in all_vids:
-                if "bus" in traci.vehicle.getTypeID(vid).lower() or "truck" in traci.vehicle.getTypeID(vid).lower():
-                    heavy_count += 1
-            
-            heavy_ratio = heavy_count / len(all_vids) if all_vids else 0.0
-            pcu = [heavy_ratio, 1.0, 1.0, 1.0] # Slot 24 now holds live heavy ratio
-
-            state = np.array(queues + phase + v2x + evp + temporal + env_state + pcu)
-            all_states[jid] = state
-        
-        if len(self.junction_ids) == 1:
-            return all_states[self.main_jid]
-        return all_states
+            best_phase = None
+            max_greens = -1
+            for p_idx, phase in enumerate(phases):
+                state = phase.state
+                if 'y' in state.lower(): continue
+                greens = sum(1 for idx in target_indices if state[idx].lower() == 'g' or state[idx] == 'G')
+                if greens > max_greens and greens > 0:
+                    max_greens, best_phase = greens, p_idx
+            return best_phase
+        except: return None
 
     def step(self, actions):
-        """
-        [Day 2: Multi-Agent]
-        Expects a dictionary of actions {jid: action}.
-        Returns dicts: {jid: next_state}, {jid: reward}, False.
-        """
-        # Convert single action to dict for uniform processing
-        if not isinstance(actions, dict):
-            actions = {self.main_jid: actions}
+        if not isinstance(actions, dict): actions = {self.main_jid: actions}
+        
+        # Day 8: Probabilistic Spontaneous Emergency Pulse
+        if random.random() < self.ambulance_spawn_chance:
+            self._trigger_random_emergency()
 
-        # Apply actions to each junction
-        for jid, action in actions.items():
+        all_e = get_emergency_status()
+        if all_e and self.use_gui: time.sleep(0.1)
+        
+        self._process_spawn_requests()
+        self._auto_release_emergencies(all_e)
+        self._update_junction_visuals(all_e)
+        self._update_green_corridors(all_e)
+        
+        for jid, act in actions.items():
             if jid not in self.junction_states: continue
             
-            current_phase = self.junction_states[jid]["phase"]
-            time_in_phase = self.junction_states[jid]["time_in_phase"]
+            p_map = self.junction_states[jid]["phases_map"]
+            selected_by_agent = True
             
-            # --- DYNAMIC ACTION EXECUTION ---
-            # Map action 0 -> NS Green
-            # Map action 1 -> EW Green
-            phase_map = self.junction_states[jid]["phases_map"]
-            new_phase = phase_map["NS"] if action == 0 else phase_map["EW"]
-            
-            if new_phase != current_phase and time_in_phase >= self.junction_states[jid]["min_phase_time"]:
-                traci.trafficlight.setPhase(jid, new_phase)
-                self.junction_states[jid]["phase"] = new_phase
-                self.junction_states[jid]["time_in_phase"] = 0
-            else:
-                self.junction_states[jid]["time_in_phase"] += self.frame_skip
+            if jid in all_e: 
+                amb_phase = self._get_ambulance_phase(jid, all_e[jid].get("route", []))
+                if amb_phase is not None:
+                    best_p = amb_phase
+                    selected_by_agent = False
+                    if self.current_step % 20 == 0:
+                        print(f"🚦 [EVP ACTIVE] Dynamic Corridor overriding {jid} for {all_e[jid].get('vehicle_id')} (Phase {best_p})")
+                else:
+                    act = 0 if all_e[jid].get("direction", "NS") == "NS" else 1
 
-        # Advance simulation (with Frame Skipping)
-        for _ in range(self.frame_skip):
-            traci.simulationStep()
-            
+            if selected_by_agent:
+                possible_phases = p_map["NS"] if act == 0 else p_map["EW"]
+                best_p = possible_phases[0]
+                if len(possible_phases) > 1:
+                    max_p = -1
+                    link_info = p_map["link_info"]
+                    dir_links = link_info["ns"] if act == 0 else link_info["ew"]
+                    
+                    logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(jid)
+                    for pid in possible_phases:
+                        state = logics[0].phases[pid].state
+                        phase_pressure = 0
+                        seen_lanes = set()
+                        for idx in dir_links:
+                            if state[idx].lower() == 'g':
+                                lane_id = link_info["links"][idx][0][0]
+                                if lane_id not in seen_lanes:
+                                    phase_pressure += self.get_lane_pcu_pressure(lane_id)
+                                    seen_lanes.add(lane_id)
+                        if phase_pressure > max_p:
+                            max_p, best_p = phase_pressure, pid
+
+            if best_p != self.junction_states[jid]["phase"] and self.junction_states[jid]["time_in_phase"] >= 10:
+                traci.trafficlight.setPhase(jid, best_p)
+                self.junction_states[jid]["phase"], self.junction_states[jid]["time_in_phase"] = best_p, 0
+            else: self.junction_states[jid]["time_in_phase"] += self.frame_skip
+        
+        for _ in range(self.frame_skip): traci.simulationStep()
         self.current_step += self.frame_skip
-
-        # Compute rewards and next states
-        rewards = {}
-        next_states = self._get_state()
-        
-        # For dashboard (aggregate pressure)
-        total_pressure = 0
-        
+        rew, ns = {}, self._get_state()
+        tot_p = 0
         for jid in self.junction_ids:
-            incoming = self.junction_lanes[jid]["incoming"]
-            outgoing = self.junction_lanes[jid]["outgoing"]
+            inc, out = self.junction_lanes[jid]["incoming"], self.junction_lanes[jid]["outgoing"]
+            in_p = sum(self.get_lane_pcu_pressure(l) for l in inc)
+            out_p = sum(self.get_lane_pcu_pressure(l) for l in out)
+            rew[jid] = -(in_p - out_p)
+            tot_p += (in_p - out_p)
+        city = {jid: {"queues": [round(self.get_lane_pcu_pressure(l), 1) for l in self.junction_lanes[jid]["incoming"]], "score": int(rew[jid]), "phase": "NS-Green" if self.junction_states[jid]["phase"] == self.junction_states[jid]["phases_map"]["NS"] else "EW-Green"} for jid in self.junction_ids}
+        update_live_data({"simulation_time": self.current_step, "junctions": city, "total_congestion": int(tot_p)})
+        d = self.current_step >= self.max_steps
+        if len(self.junction_ids) == 1: return ns, rew[self.main_jid], d
+        return ns, rew, {jid: d for jid in self.junction_ids}
+
+    def _trigger_random_emergency(self):
+        """Day 8: Automatically generates a random ambulance route and triggers EVP."""
+        print("🚨 EMERGENCY PULSE: Dispatching spontaneous ambulance!")
+        try:
+            start_edge = random.choice(self.all_edges)
+            end_edge = random.choice(self.all_edges)
+            while start_edge == end_edge: end_edge = random.choice(self.all_edges)
             
-            # Day 4: Rewards are now calculated using PCU volume pressure
-            in_p = sum(self.get_lane_pcu_pressure(l) for l in incoming)
-            out_p = sum(self.get_lane_pcu_pressure(l) for l in outgoing)
+            route_info = traci.simulation.findRoute(start_edge, end_edge)
+            # Day 8: Ensure the route is at least 3 edges long for visibility
+            max_tries = 5
+            while (not route_info.edges or len(route_info.edges) < 3) and max_tries > 0:
+                 start_edge = random.choice(self.all_edges)
+                 end_edge = random.choice(self.all_edges)
+                 route_info = traci.simulation.findRoute(start_edge, end_edge)
+                 max_tries -= 1
+
+            if not route_info.edges or len(route_info.edges) < 2: return
             
-            pressure = in_p - out_p
-            rewards[jid] = -pressure
-            total_pressure += pressure
+            vid = f"spont_amb_{self.current_step}"
+            self._inject_ambulance_event(vid, route_info.edges)
+        except Exception as e:
+            print(f"⚠️ Failed to trigger random emergency: {e}")
 
-        # Update Live Dashboard (aggregate view)
-        city_stats = {}
-        for jid in self.junction_ids:
-            city_stats[jid] = {
-                # Dashboard shows weighted PCU queues for true visual congestion
-                "queues": [round(self.get_lane_pcu_pressure(l), 1) for l in self.junction_lanes[jid]["incoming"]],
-                "score": int(rewards[jid]),
-                "phase": "NS-Green" if self.junction_states[jid]["phase"] == self.junction_states[jid]["phases_map"]["NS"] else "EW-Green"
-            }
-
-        api_payload = {
-            "simulation_time": self.current_step,
-            "city_coordinated": len(self.junction_ids) > 1,
-            "junctions": city_stats,
-            "total_congestion": int(total_pressure)
-        }
-        update_live_data(api_payload)
-
-        done = self.current_step >= self.max_steps
+    def _inject_ambulance_event(self, vid, route_edges):
+        """Infects a vehicle and registers its route for all junctions it will cross."""
+        from api_server import trigger_emergency
         
-        # Handle backward compatibility return
-        if len(self.junction_ids) == 1:
-            return next_states, rewards[self.main_jid], done
+        # 1. Create Route & Vehicle
+        route_id = f"route_{vid}"
+        traci.route.add(route_id, route_edges)
+        
+        # Ensure 'ambulance' type exists with robust fallback for base type
+        avail_types = traci.vehicletype.getIDList()
+        if "ambulance" not in avail_types:
+            base_type = "passenger" if "passenger" in avail_types else (avail_types[0] if avail_types else "DEFAULT_VEHTYPE")
+            try:
+                traci.vehicletype.copy(base_type, "ambulance")
+            except:
+                # If copy fails, we still try to set standard ambulance properties
+                pass
+            traci.vehicletype.setColor("ambulance", (255, 255, 0, 255)) # Bright Yellow
+            traci.vehicletype.setSpeedFactor("ambulance", 1.8)
+            traci.vehicletype.setVehicleClass("ambulance", "emergency")
+            traci.vehicletype.setShapeClass("ambulance", "emergency")
+            traci.vehicletype.setWidth("ambulance", 4.0)  # Extra visible
+            traci.vehicletype.setLength("ambulance", 12.0) # Extra visible
+        
+        traci.vehicle.add(vid, route_id, typeID="ambulance", departLane="best", departSpeed="max")
+        
 
-        # Multi-agent return
-        dones = {jid: done for jid in self.junction_ids}
-        return next_states, rewards, dones
+        # 2. Identify Junctions on Route and Trigger EVP
+        processed_junctions = set()
+        for edge_id in route_edges:
+            junction_id = traci.edge.getToJunction(edge_id)
+            if junction_id in self.junction_ids and junction_id not in processed_junctions:
+                # Trigger EVP DIRECTLY to avoid HTTP/Thread race conditions
+                add_emergency(junction_id, {
+                    "direction": "NS",
+                    "vehicle_id": vid,
+                    "route": list(route_edges)
+                })
+                processed_junctions.add(junction_id)
+        
+        # 3. Force a simulation step to spawn the vehicle visually
+        traci.simulationStep()
+        
+        # Make the camera follow the ambulance instantly (must happen after simulationStep!)
+        try:
+            if hasattr(traci, "gui"):
+                traci.gui.trackVehicle("View #0", vid)
+                os.system('cls' if os.name == 'nt' else 'clear') 
+                print(f"🎥 CAMERA LOCK ENGAGED on {vid}")
+        except Exception:
+            pass
+        
+        print(f"🚑 Ambulance {vid} route: {route_edges[0]} -> {route_edges[-1]} ({len(processed_junctions)} junctions locked)")
+
+    def _process_spawn_requests(self):
+        requests = get_spawn_requests()
+        for req in requests:
+            vtype = req.get("type", "ambulance")
+            vid = req.get("vehicle_id", f"api_amb_{self.current_step}")
+            route = req.get("route", [])
+            
+            # Day 8: Junction-to-Junction Routing
+            if not route and "start_junction" in req and "end_junction" in req:
+                s_jid, e_jid = req["start_junction"], req["end_junction"]
+                try:
+                    # Find edges
+                    # We must iterate edges because traci.junction has no getOutgoingEdges
+                    s_edges = [e for e in traci.edge.getIDList() if not e.startswith(":") and traci.edge.getFromJunction(e) == s_jid]
+                    e_edges = [e for e in traci.edge.getIDList() if not e.startswith(":") and traci.edge.getToJunction(e) == e_jid]
+                    
+                    if s_edges and e_edges:
+                        route_info = traci.simulation.findRoute(s_edges[0], e_edges[0])
+
+                        route = list(route_info.edges)
+                        if not route:
+                             print(f"⚠️ API Spawn: No route found from {s_jid} to {e_jid}")
+                             continue
+                    else:
+                        print(f"⚠️ API Spawn: Invalid start/end junction edges ({s_jid}->{e_jid})")
+                        continue
+                except Exception as e:
+                    print(f"⚠️ API Spawn failed to resolve route: {e}")
+                    continue
+
+            if route:
+                self._inject_ambulance_event(vid, route)
+                print(f"🚀 API TRIGGERED: {vtype} {vid} on custom route ({len(route)} edges)")
+
+    def _update_junction_visuals(self, all_e):
+        from security.watchdog import global_watchdog
+        for jid in self.junction_ids:
+            pid = f"vis_{jid}"
+            
+            # Determine Color based on Operational State
+            is_active = True
+            if jid in all_e:
+                color = (255, 0, 0, 150) # Bright Red -> Emergency Preemption
+                radius = 45
+            elif global_watchdog.is_crashed(jid):
+                pulse = 255 if (self.current_step // 2) % 2 == 0 else 100
+                color = (255, pulse, 0, 150) # Flashing Orange -> Watchdog Fallback
+                radius = 40
+            elif global_watchdog.is_recently_spoofed(jid):
+                pulse = 255 if (self.current_step // 2) % 2 == 0 else 100
+                color = (pulse, 0, pulse, 150) # Flashing Purple -> Hacker Detection
+                radius = 45
+            else:
+                is_active = False
+                
+            try:
+                if is_active:
+                    if pid not in traci.polygon.getIDList():
+                        x, y = self.junction_pos[jid]
+                        pts = [(x + radius*np.cos(rad), y + radius*np.sin(rad)) for rad in np.linspace(0, 2*np.pi, 20)]
+                        # Draw as a thicker outline instead of solid, much cleaner in SUMO
+                        traci.polygon.add(pid, pts, color, fill=False, lineWidth=5, layer=100)
+                    else:
+                        traci.polygon.setColor(pid, color)
+                else:
+                    if pid in traci.polygon.getIDList():
+                        traci.polygon.remove(pid)
+            except:
+                pass
+
+    def _update_green_corridors(self, all_e):
+        if not all_e:
+            if self.colored_edges:
+                for ed in list(self.colored_edges):
+                    try:
+                        for i in range(traci.edge.getLaneNumber(ed)):
+                            traci.lane.setRGBAColor(f"{ed}_{i}", (255, 255, 255, 255))
+                    except: pass
+                self.colored_edges.clear()
+            return
+        for jid, info in all_e.items():
+            for ed in info.get("route", []):
+                try:
+                    for i in range(traci.edge.getLaneNumber(ed)):
+                        traci.lane.setRGBAColor(f"{ed}_{i}", (0, 255, 0, 255))
+                    self.colored_edges.add(ed)
+                except: pass
+
+    def _auto_release_emergencies(self, all_e):
+        for jid, info in all_e.items():
+            vid = info.get("vehicle_id")
+            if not vid: continue
+            try:
+                if vid in traci.vehicle.getIDList():
+                    curr_edge = traci.vehicle.getRoadID(vid)
+                    incoming_edges = [traci.lane.getEdgeID(l) for l in self.junction_lanes[jid]["incoming"]]
+                    # If vehicle is on the road but not on an incoming edge of THIS junction
+                    # Note: We need a slight buffer or check if it's on an outgoing edge
+                    outgoing_edges = [traci.lane.getEdgeID(l) for l in self.junction_lanes[jid]["outgoing"]]
+                    if curr_edge in outgoing_edges:
+                        clear_emergency(jid)
+                        print(f"✅ [RELEASE] Ambulance {vid} cleared junction {jid}. AI Agent resuming control.")
+                else:
+                    # If vehicle is not on the net, it might be in the departure queue
+                    # Only clear if it's not and we've waited a few steps
+                    if self.current_step % 50 == 0: # Periodic cleanup for completed trips
+                         # Logic: If it disappeared from the simulation entirely (finished)
+                         pass 
+            except: pass
 
     def close(self):
-        try:
-            traci.close()
-        except traci.exceptions.FatalTraCIError:
-            pass # TraCI is already closed
-
-
-
-
-
+        try: traci.close()
+        except: pass

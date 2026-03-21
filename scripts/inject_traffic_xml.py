@@ -1,10 +1,21 @@
 import os
 import re
+import argparse
 
 def main():
+    parser = argparse.ArgumentParser(description="Inject Heterogeneous Traffic into SUMO Routes")
+    parser.add_argument("--map", type=str, default="4X4_grid", help="Simulation folder (e.g., connaught_place)")
+    parser.add_argument("--rou", type=str, default="4x4loop.rou.xml", help="Route file to modify (e.g., connaught.rou.xml)")
+    args = parser.parse_args()
+
+    # The rest of the script remains the same, just using args.map instead of args.env
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    xml_path = os.path.join(script_dir, "..", "ai_core", "4x4loop.rou.xml")
+    xml_path = os.path.join(script_dir, "..", "ai_core", "simulations", args.map, args.rou)
     
+    if not os.path.exists(xml_path):
+        print(f"Error: Route file not found at {xml_path}")
+        return
+
     print(f"Reading {xml_path}...")
     with open(xml_path, "r", encoding="utf-8") as f:
         content = f.read()
@@ -13,7 +24,7 @@ def main():
     if 'id="mixed_traffic"' in content:
         print("Scrubbing previous injection...")
         # Remove everything from the IRC comments down to the closing distribution tag
-        content = re.sub(r'<!-- IRC Standard Vehicle Types -->.*?</vTypeDistribution>', '', content, flags=re.DOTALL)
+        content = re.sub(r'<!-- Heterogeneous Traffic Distribution.*?</vTypeDistribution>', '', content, flags=re.DOTALL)
 
 
     distribution_xml = """
@@ -40,7 +51,7 @@ def main():
     with open(xml_path, "w", encoding="utf-8") as f:
         f.write(content)
 
-    print("Done! The 4x4loop.rou.xml file is now updated with realistic Heterogeneous traffic.")
+    print(f"Done! The {args.rou} file is now updated with realistic Heterogeneous traffic.")
 
 if __name__ == "__main__":
     main()
