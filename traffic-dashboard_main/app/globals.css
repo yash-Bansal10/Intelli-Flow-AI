@@ -1,7 +1,5 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
 @custom-variant dark (&:is(.dark *));
 
 :root {
@@ -117,10 +115,11 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    /* Base text colors managed by NextThemes / Tailwind classes */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border, currentColor);
   }
 }
