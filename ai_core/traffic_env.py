@@ -98,7 +98,7 @@ class TrafficEnv:
         self.main_jid = self.junction_ids[0]
         self.colored_edges = set() 
         self.all_edges = [e for e in traci.edge.getIDList() if not e.startswith(":")]
-        self.ambulance_spawn_chance = 0.90 # Trigger constant ambient deployment per user request
+        self.ambulance_spawn_chance = 0.03 # Trigger constant ambient deployment per user request
 
     def get_emergency_status(self):
         """Proxy method for training script to check API status."""
@@ -374,7 +374,10 @@ class TrafficEnv:
             x, y = self.junction_pos[jid]
             lon, lat = traci.simulation.convertGeo(x, y)
             queues = [round(self.get_lane_pcu_pressure(l), 1) for l in self.junction_lanes[jid]["incoming"]]
-            score = int(rew[jid])
+            # Use total incoming PCU pressure as the congestion score (always >= 0)
+            inc, out = self.junction_lanes[jid]["incoming"], self.junction_lanes[jid]["outgoing"]
+            in_p = sum(self.get_lane_pcu_pressure(l) for l in inc)
+            score = int(in_p)
             
             # Read directly from physical Traci actuator index
             curr_p = traci.trafficlight.getPhase(jid)
@@ -401,7 +404,11 @@ class TrafficEnv:
             }
             
             city[jid] = {"lat": lat, "lng": lon, "queues": queues, "score": score, "phase": phase, "time_in_phase": self.junction_states[jid]["time_in_phase"], "sensors": edge_sensors, "is_emergency": jid in all_e}
-        update_live_data({"simulation_time": self.current_step, "junctions": city, "total_congestion": int(tot_p)})
+        update_live_data({
+            "simulation_time": self.current_step,
+            "junctions": city,
+            "total_congestion": int(tot_p)
+        })
         d = self.current_step >= self.max_steps
         if len(self.junction_ids) == 1: return ns, rew[self.main_jid], d
         return ns, rew, {jid: d for jid in self.junction_ids}

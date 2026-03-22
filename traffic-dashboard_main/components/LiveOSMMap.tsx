@@ -4,7 +4,8 @@ import { useEffect, useRef } from "react"
 import type { SimulationState } from "@/hooks/useSimData"
 import "leaflet/dist/leaflet.css"
 import L from "leaflet"
-import { Clock, AlertTriangle } from "lucide-react"
+import { Clock, AlertTriangle, AlertCircle } from "lucide-react"
+import { useHardwareHealth } from "@/context/HardwareHealthContext"
 
 export interface LiveOSMMapProps {
   simulationData: SimulationState | null
@@ -17,7 +18,10 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Record<string, L.CircleMarker>>({})
+  const faultMarkersRef = useRef<Record<string, L.Marker>>({})
   const boundsSet = useRef(false)
+  
+  const { getMalfunctionCount } = useHardwareHealth()
 
   // Initialize Map Once
   useEffect(() => {
@@ -70,10 +74,22 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
       maxLng = Math.max(maxLng, data.lng)
       hasCoords = true
 
-      // Determine colors
-      const isRed = data.phase.includes("RED")
-      const color = isEmergencyActive ? '#ef4444' : (isRed ? '#f43f5e' : '#10b981')
+      // Congestion-score-based coloring
+      const score = data.score || 0
+      let color: string
+      if (score >= 100) {
+        color = '#ef4444' // Red — high congestion
+      } else if (score >= 50) {
+        color = '#f59e0b' // Orange-yellow — moderate
+      } else {
+        color = '#10b981' // Green — clear
+      }
+      // Emergency overrides all
+      if (isEmergencyActive) color = '#ef4444'
       const radius = isEmergencyActive ? 16 : 10
+
+      const malCount = getMalfunctionCount(jid)
+      const jName = jid // Show SUMO node ID directly
 
       // Create or update marker
       if (!markersRef.current[jid]) {
@@ -87,19 +103,27 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
         }).addTo(map)
 
         // Custom Tooltip (Hover)
-        marker.bindTooltip(`
-          <div style="font-family: inherit; margin: 0; padding: 4px;">
-            <h4 style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">AI Junction ${jid}</h4>
-            <p style="margin: 0; color: #64748b; font-size: 12px;">Phase: <span style="color: ${color}; font-weight: bold;">${data.phase}</span></p>
-            <p style="margin: 0; color: #64748b; font-size: 12px;">AI Score: <strong>${data.score}</strong> (Delay)</p>
-            <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 10px; font-weight: bold; text-transform: uppercase;">Click for Telemetry</p>
+        const updateTooltip = (name: string, c: string, s: number, ph: string) => `
+          <div style="font-family: inherit; margin: 0; padding: 4px; min-width: 140px;">
+            <h4 style="font-weight: bold; font-size: 13px; margin-bottom: 2px; color: #1e293b;">${name}</h4>
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+               <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${c};"></span>
+               <p style="margin: 0; color: #64748b; font-size: 11px; font-weight: 600;">Phase: ${ph}</p>
+            </div>
+            <p style="margin: 0; color: #64748b; font-size: 11px;">AI Congestion: <strong>${Math.floor(s)}</strong></p>
+            <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Click for Live Telemetry</p>
           </div>
-        `, { direction: 'top', offset: [0, -10], opacity: 0.95, className: 'custom-leaflet-tooltip' })
+        `
+
+        marker.bindTooltip(updateTooltip(jName, color, data.score, data.phase), { 
+          direction: 'top', 
+          offset: [0, -10], 
+          opacity: 0.95, 
+          className: 'custom-leaflet-tooltip' 
+        })
 
         // Click opens the React Junction Drawer
-        marker.on('click', () => {
-          onNodeClick(jid)
-        })
+        marker.on('click', () => onNodeClick(jid))
 
         // Add glow effect on hover
         marker.on('mouseover', function(this: L.CircleMarker) {
@@ -116,14 +140,50 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
         marker.setStyle({ fillColor: color, radius: radius })
         
         // Update tooltip content dynamically
-        marker.setTooltipContent(`
-          <div style="font-family: inherit; margin: 0; padding: 4px;">
-            <h4 style="font-weight: bold; font-size: 14px; margin-bottom: 4px;">AI Junction ${jid}</h4>
-            <p style="margin: 0; color: #64748b; font-size: 12px;">Phase: <span style="color: ${color}; font-weight: bold;">${data.phase}</span></p>
-            <p style="margin: 0; color: #64748b; font-size: 12px;">AI Score: <strong>${data.score}</strong> (Delay)</p>
-            <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 10px; font-weight: bold; text-transform: uppercase;">Click for Telemetry</p>
+        const updateTooltip = (name: string, c: string, s: number, ph: string) => `
+          <div style="font-family: inherit; margin: 0; padding: 4px; min-width: 140px;">
+            <h4 style="font-weight: bold; font-size: 13px; margin-bottom: 2px; color: #1e293b;">${name}</h4>
+            <div style="display: flex; align-items: center; gap: 4px; margin-bottom: 4px;">
+               <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: ${c};"></span>
+               <p style="margin: 0; color: #64748b; font-size: 11px; font-weight: 600;">Phase: ${ph}</p>
+            </div>
+            <p style="margin: 0; color: #64748b; font-size: 11px;">AI Congestion: <strong>${Math.floor(s)}</strong></p>
+            <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Click for Live Telemetry</p>
           </div>
-        `)
+        `
+        marker.setTooltipContent(updateTooltip(jName, color, data.score, data.phase))
+      }
+
+      // Day 9: Severity Fault Indicators (Yellow/Red Alerts)
+      if (malCount > 0) {
+        const alertColor = malCount > 2 ? "#ef4444" : "#f59e0b" // Red or Yellow
+        const pulseClass = malCount > 2 ? "animate-pulse" : ""
+        
+        const faultIcon = L.divIcon({
+          className: 'custom-fault-icon',
+          html: `
+            <div class="flex items-center justify-center ${pulseClass}" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="${alertColor}" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+          `,
+          iconSize: [20, 20],
+          iconAnchor: [10, 25], // Positioned above the circle marker
+        })
+
+        if (!faultMarkersRef.current[jid]) {
+          faultMarkersRef.current[jid] = L.marker([data.lat, data.lng], { icon: faultIcon, interactive: false }).addTo(map)
+        } else {
+          faultMarkersRef.current[jid].setLatLng([data.lat, data.lng])
+          faultMarkersRef.current[jid].setIcon(faultIcon)
+        }
+      } else {
+        // Clear marker if fixed
+        if (faultMarkersRef.current[jid]) {
+          faultMarkersRef.current[jid].remove()
+          delete faultMarkersRef.current[jid]
+        }
       }
     })
 

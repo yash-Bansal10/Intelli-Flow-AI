@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Activity, Cpu, Camera, Mic, Tv, Watch, Route, Wifi, CloudRain, ScanLine, CarFront } from "lucide-react"
 import { motion } from "framer-motion"
 import { NumberTicker } from "./NumberTicker"
+import { useHardwareHealth } from "@/context/HardwareHealthContext"
 
 interface MetricStat {
   label: string;
@@ -12,6 +13,8 @@ interface MetricStat {
 }
 
 export function HealthMonitor({ sensors, junctionId }: { sensors?: any, junctionId?: string }) {
+  const { getHardwareStatus } = useHardwareHealth()
+  
   const metrics: { title: string, icon: JSX.Element, stats: MetricStat[] }[] = [
     {
       title: "Vision AI (YOLOv11)",
@@ -82,34 +85,46 @@ export function HealthMonitor({ sensors, junctionId }: { sensors?: any, junction
       animate="show"
       className="grid grid-cols-2 lg:grid-cols-3 gap-4 w-full"
     >
-      {metrics.map((metric, i) => (
-        <motion.div key={i} variants={cardVariants}>
-          <Card className="bg-white/60 backdrop-blur-md border-slate-200/60 shadow-sm shadow-slate-200/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
-            <CardHeader className="p-3 pb-2 flex flex-row items-center gap-2 space-y-0">
-              <div className="p-1.5 bg-slate-50 rounded-lg shadow-sm border border-slate-100">
-                {metric.icon}
-              </div>
-              <CardTitle className="text-sm font-semibold text-slate-700">{metric.title}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-0">
-              <div className="space-y-1.5">
-                {metric.stats.map((stat, j) => (
-                  <div key={j} className="flex justify-between items-center text-xs">
-                    <span className="text-slate-500">{stat.label}</span>
-                    <span className="font-medium text-slate-800 font-mono bg-slate-100/50 px-1.5 py-0.5 rounded">
-                      {stat.numeric !== undefined ? (
-                        <NumberTicker value={stat.numeric as number} suffix={stat.suffix} decimals={stat.decimals} />
-                      ) : (
-                        stat.value
-                      )}
-                    </span>
+      {metrics.map((metric, i) => {
+        const isHealthy = junctionId ? getHardwareStatus(junctionId, metric.title) : true
+        
+        return (
+          <motion.div key={i} variants={cardVariants}>
+            <Card className="bg-white/60 backdrop-blur-md border-slate-200/60 shadow-sm shadow-slate-200/50 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+              {/* Health Status Dot */}
+              <div 
+                className={`absolute top-2 right-2 w-2.5 h-2.5 rounded-full shadow-sm transition-colors duration-500 z-10 ${isHealthy ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`} 
+                title={isHealthy ? "System Healthy" : "Hardware Malfunction Detected"}
+              />
+              
+              <CardHeader className="p-3 pb-2 flex flex-row items-center gap-2 space-y-0 relative z-0">
+                <div className={`p-1.5 rounded-lg shadow-sm border transition-colors ${isHealthy ? 'bg-slate-50 border-slate-100' : 'bg-rose-50 border-rose-100'}`}>
+                  <div className={isHealthy ? '' : 'text-rose-500'}>
+                    {metric.icon}
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      ))}
+                </div>
+                <CardTitle className={`text-sm font-semibold transition-colors ${isHealthy ? 'text-slate-700' : 'text-rose-600'}`}>{metric.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 pt-0">
+                <div className="space-y-1.5">
+                  {metric.stats.map((stat, j) => (
+                    <div key={j} className="flex justify-between items-center text-xs">
+                      <span className="text-slate-500">{stat.label}</span>
+                      <span className={`font-medium font-mono px-1.5 py-0.5 rounded transition-colors ${isHealthy ? 'text-slate-800 bg-slate-100/50' : 'text-rose-700 bg-rose-100/50'}`}>
+                        {stat.numeric !== undefined ? (
+                          <NumberTicker value={stat.numeric as number} suffix={stat.suffix} decimals={stat.decimals} />
+                        ) : (
+                          isHealthy ? stat.value : "FAIL/ERR"
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )
+      })}
     </motion.div>
   )
 }

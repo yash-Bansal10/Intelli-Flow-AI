@@ -5,6 +5,7 @@ import { HealthMonitor } from "./HealthMonitor"
 import { motion, AnimatePresence } from "framer-motion"
 import { NumberTicker } from "./NumberTicker"
 import { useSimData } from "@/hooks/useSimData"
+import { useHardwareHealth } from "@/context/HardwareHealthContext"
 import { useState, useEffect } from "react"
 
 interface JunctionDrawerProps {
@@ -15,13 +16,15 @@ interface JunctionDrawerProps {
 
 export function JunctionDrawer({ isOpen, onClose, junctionId }: JunctionDrawerProps) {
   const { data: simulationData } = useSimData()
+  const { junctionNames, resolveJunctionName } = useHardwareHealth()
   const [showArrows, setShowArrows] = useState(false)
-  const [locName, setLocName] = useState<string>("Locating Map Vector...")
   const [elapsedLocal, setElapsedLocal] = useState(0)
   
   // Dynamically extract the specific junction data from the live stream
   const junctionData = junctionId && simulationData?.junctions ? simulationData.junctions[junctionId] : null
   const simTime = simulationData?.simulation_time || 0
+
+  const locName = junctionId ? (junctionNames[junctionId] || "Localizing AI Cluster...") : "Select a Junction"
 
   // Sync the local ticker to the hard-truth Python Agent timestamp
   useEffect(() => {
@@ -56,22 +59,12 @@ export function JunctionDrawer({ isOpen, onClose, junctionId }: JunctionDrawerPr
   const isEW = phaseName.includes("EW")
   const isRed = phaseName.includes("RED")
 
-  // Nominatim OpenStreetMap Reverse Geocoding
+  // Nominatim OpenStreetMap Reverse Geocoding (Centralized)
   useEffect(() => {
-    if (junctionData?.lat && junctionData?.lng) {
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${junctionData.lat}&lon=${junctionData.lng}&format=json`)
-        .then(res => res.json())
-        .then(d => {
-          if (d.address) {
-            const name = [d.address.road || d.address.suburb || d.address.neighbourhood, d.address.city || d.address.state].filter(Boolean).join(", ")
-            setLocName(name || `Junction ${junctionId}`)
-          } else {
-            setLocName(`Node ID: ${junctionId}`)
-          }
-        })
-        .catch(() => setLocName(`Node ID: ${junctionId}`))
+    if (junctionId && junctionData?.lat && junctionData?.lng) {
+      resolveJunctionName(junctionId, junctionData.lat, junctionData.lng)
     }
-  }, [junctionId, junctionData?.lat, junctionData?.lng])
+  }, [junctionId, junctionData?.lat, junctionData?.lng, resolveJunctionName])
 
   return (
     <AnimatePresence>
@@ -151,7 +144,7 @@ export function JunctionDrawer({ isOpen, onClose, junctionId }: JunctionDrawerPr
               <div className="bg-white/60 backdrop-blur-md border border-slate-200/60 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">DQN AI Engine</h3>
                 <div className="text-2xl font-bold text-sky-500 h-8 flex items-center">{junctionData ? "ACTIVE" : "IDLE"}</div>
-                <p className="text-sm font-mono text-slate-400 mt-3 flex gap-1">Delay Score: <span className="text-slate-700 font-bold">{aiScore}</span></p>
+                <p className="text-sm font-mono text-slate-400 mt-3 flex gap-1">Delay Score: <span className="text-slate-700 font-bold">{Math.floor(aiScore)}</span></p>
               </div>
             </motion.div>
 

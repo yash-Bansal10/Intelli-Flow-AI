@@ -1,7 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { Settings2, Volume2, ShieldAlert, SlidersHorizontal, AlertTriangle, Save } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Settings2, Volume2, ShieldAlert, SlidersHorizontal, AlertTriangle, Save, Activity, Camera, Wifi, Cpu, CarFront, Zap } from "lucide-react"
+import { useSimData } from "@/hooks/useSimData"
+import { useHardwareHealth } from "@/context/HardwareHealthContext"
 
 export default function SettingsPage() {
   const [qThreshold, setQThreshold] = useState(0.85)
@@ -9,6 +11,22 @@ export default function SettingsPage() {
   const [maxGreen, setMaxGreen] = useState(60)
   const [noiseInjection, setNoiseInjection] = useState(false)
   const [overrideActive, setOverrideActive] = useState(false)
+  const [selectedJunction, setSelectedJunction] = useState<string>("")
+  
+  const { data: simulationData } = useSimData()
+  const { setHardwareStatus, getHardwareStatus } = useHardwareHealth()
+
+  const junctionIds = simulationData?.junctions ? Object.keys(simulationData.junctions) : []
+
+  // List of hardware metrics matching HealthMonitor
+  const hardwareList = [
+    { name: "Vision AI (YOLOv11)", icon: <Activity className="w-4 h-4" /> },
+    { name: "IP Cameras (RTSP)", icon: <Camera className="w-4 h-4" /> },
+    { name: "Intersection Mesh", icon: <Wifi className="w-4 h-4" /> },
+    { name: "Sensor Fusion", icon: <Cpu className="w-4 h-4" /> },
+    { name: "PCU Calculator", icon: <CarFront className="w-4 h-4" /> },
+    { name: "Safety Controller", icon: <ShieldAlert className="w-4 h-4" /> },
+  ]
 
   const handleSave = () => {
     alert("Configurations saved to Flask Backend successfully.")
@@ -179,6 +197,74 @@ export default function SettingsPage() {
           </div>
         </div>
 
+      </div>
+
+      {/* Hardware Diagnostic Section */}
+      <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-3">
+              <div className="p-2 bg-amber-50 rounded-xl border border-amber-100">
+                <Zap className="w-6 h-6 text-amber-500" />
+              </div>
+              Hardware Persistence & Fault Injection
+            </h2>
+            <p className="text-slate-500 mt-1 font-medium text-sm">Target specific edge nodes to simulate real-world hardware degradation.</p>
+          </div>
+
+          <div className="flex items-center gap-3 bg-slate-50 p-2 rounded-2xl border border-slate-200">
+            <label className="text-xs font-bold text-slate-500 uppercase ml-2">Active Node:</label>
+            <select 
+              value={selectedJunction}
+              onChange={(e) => setSelectedJunction(e.target.value)}
+              className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 block p-2.5 font-bold shadow-sm outline-none"
+            >
+              <option value="">{junctionIds.length === 0 ? "Waiting for simulation..." : "Select a Junction"}</option>
+              {junctionIds.map(id => (
+                <option key={id} value={id}>{id}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {!selectedJunction ? (
+          <div className="py-20 flex flex-col items-center justify-center text-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
+             <div className="p-4 bg-white rounded-full shadow-sm mb-4">
+                <Settings2 className="w-8 h-8 text-slate-300" />
+             </div>
+             <p className="text-slate-400 font-bold">Select a node from the map list above to perform diagnostics.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {hardwareList.map((hw) => {
+              const isHealthy = getHardwareStatus(selectedJunction, hw.name)
+              return (
+                <div key={hw.name} className="p-6 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-between hover:border-slate-300 transition-all group">
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-xl shadow-sm border transition-colors ${isHealthy ? 'bg-white border-slate-100 group-hover:bg-emerald-50' : 'bg-rose-50 border-rose-100'}`}>
+                      <div className={isHealthy ? 'text-slate-400 group-hover:text-emerald-500' : 'text-rose-500'}>
+                        {hw.icon}
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm leading-tight">{hw.name}</h4>
+                      <p className={`text-[10px] font-bold uppercase mt-1 ${isHealthy ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {isHealthy ? "Healthy" : "Maintenance Required"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={() => setHardwareStatus(selectedJunction, hw.name, !isHealthy)}
+                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 shadow-inner ${isHealthy ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                  >
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition duration-300 ease-in-out ${isHealthy ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )

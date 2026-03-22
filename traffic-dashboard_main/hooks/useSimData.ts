@@ -15,6 +15,10 @@ export interface SimulationState {
   simulation_time: number
   junctions: Record<string, JunctionData>
   total_congestion: number
+  spatial_dictionary?: {
+    junction_names: Record<string, string>
+    junction_cities: Record<string, string>
+  }
 }
 
 export function useSimData() {
