@@ -2,13 +2,20 @@
 
 import { useState } from "react"
 import { AlertCircle, Flame, ShieldAlert, Zap } from "lucide-react"
-import { SimulationCanvas } from "@/components/SimulationCanvas"
 import { JunctionDrawer } from "@/components/JunctionDrawer"
 import { motion, AnimatePresence } from "framer-motion"
+import dynamic from "next/dynamic"
+import { useSimData } from "@/hooks/useSimData"
+
+const LiveOSMMap = dynamic(() => import("@/components/LiveOSMMap"), {
+  ssr: false,
+  loading: () => <div className="w-full h-full flex items-center justify-center bg-slate-100/50 rounded-2xl border border-slate-200 shadow-inner font-bold text-slate-400 animate-pulse">Loading OpenStreetMap Engine...</div>
+})
 
 export default function TrafficOverview() {
   const [isEmergencyActive, setIsEmergencyActive] = useState(false)
   const [selectedJunctionId, setSelectedJunctionId] = useState<string | null>(null)
+  const { data: simulationData } = useSimData()
 
   return (
     <div className="w-full h-[calc(100vh-4rem)] relative flex flex-col overflow-hidden">
@@ -53,9 +60,11 @@ export default function TrafficOverview() {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="flex-1 w-full relative group h-full"
       >
-        <SimulationCanvas
+        <LiveOSMMap
+          simulationData={simulationData}
           onNodeClick={(id) => setSelectedJunctionId(id)}
           isEmergencyActive={isEmergencyActive}
+          selectedJunctionId={selectedJunctionId}
         />
 
         {/* Helper overlay text */}

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, Cpu, Camera, Mic, Tv, Watch } from "lucide-react"
+import { Activity, Cpu, Camera, Mic, Tv, Watch, Route, Wifi, CloudRain, ScanLine, CarFront } from "lucide-react"
 import { motion } from "framer-motion"
 import { NumberTicker } from "./NumberTicker"
 
@@ -11,55 +11,57 @@ interface MetricStat {
   decimals?: number;
 }
 
-export function HealthMonitor() {
+export function HealthMonitor({ sensors, junctionId }: { sensors?: any, junctionId?: string }) {
   const metrics: { title: string, icon: JSX.Element, stats: MetricStat[] }[] = [
     {
-      title: "DQN Agent",
-      icon: <Activity className="w-5 h-5 text-orange-400" />,
-      stats: [
-        { label: "Inference", numeric: 12, suffix: "ms" },
-        { label: "Last Action", value: "SWITCH" },
-      ],
+      title: "Vision AI (YOLOv11)",
+      icon: <ScanLine className="w-5 h-5 text-indigo-500" />,
+      stats: [{ label: "Inference", value: sensors?.yolo_inference || "12ms" }, { label: "State", value: "Active" }]
     },
     {
-      title: "ESP32-CAM",
-      icon: <Camera className="w-5 h-5 text-orange-400" />,
-      stats: [
-        { label: "Stream FPS", numeric: 24.5, decimals: 1 },
-        { label: "Latency", numeric: 85, suffix: "ms" },
-      ],
+      title: "PCU Calculator",
+      icon: <CarFront className="w-5 h-5 text-indigo-400" />,
+      stats: [{ label: "Processing", value: sensors?.pcu_calcs || "0.0/sec" }, { label: "Queue", value: "Counting" }]
     },
     {
-      title: "INMP441 Mic",
-      icon: <Mic className="w-5 h-5 text-orange-400" />,
-      stats: [
-        { label: "Audio", numeric: -12, suffix: "dB" },
-        { label: "Siren Conf.", numeric: 2, suffix: "%" },
-      ],
+      title: "Sensor Fusion",
+      icon: <Cpu className="w-5 h-5 text-indigo-600" />,
+      stats: [{ label: "Status", value: sensors?.sensor_fusion || "Synced" }, { label: "Nodes", numeric: 4 }]
     },
     {
-      title: "ESP32 Controller",
-      icon: <Cpu className="w-5 h-5 text-orange-400" />,
-      stats: [
-        { label: "GPIO", value: "OK" },
-        { label: "Uptime", value: "14d 2h" },
-      ],
+      title: "IP Cameras (RTSP)",
+      icon: <Camera className="w-5 h-5 text-sky-500" />,
+      stats: [{ label: "Stream", value: sensors?.cam_status || "Active" }, { label: "Night Mode", value: sensors?.night_vision || "Auto" }]
     },
     {
-      title: "OLED display",
-      icon: <Tv className="w-5 h-5 text-orange-400" />,
-      stats: [
-        { label: "State", value: "Active" },
-        { label: "Refresh", numeric: 60, suffix: "Hz" },
-      ],
+      title: "Vehicle Presence",
+      icon: <Route className="w-5 h-5 text-amber-500" />,
+      stats: [{ label: "LiDAR Conf", value: sensors?.lidar_conf || "98%" }, { label: "Radar Speed", value: sensors?.radar_speed || "30 km/h" }]
     },
     {
-      title: "Watchdog",
-      icon: <Watch className="w-5 h-5 text-orange-400" />,
-      stats: [
-        { label: "Heartbeat", value: "Active" },
-        { label: "Mode", value: "Primary" },
-      ],
+      title: "Audio Detection",
+      icon: <Mic className="w-5 h-5 text-emerald-400" />,
+      stats: [{ label: "Siren Det.", value: sensors?.audio_siren || "None Detected" }, { label: "Mic", value: "Online" }]
+    },
+    {
+      title: "Weather Sensing",
+      icon: <CloudRain className="w-5 h-5 text-sky-400" />,
+      stats: [{ label: "Condition", value: sensors?.weather || "Clear" }, { label: "Rain/Fog", value: "Negative" }]
+    },
+    {
+      title: "Traffic AI Engine",
+      icon: <Activity className="w-5 h-5 text-rose-500" />,
+      stats: [{ label: "DQN Latency", value: sensors?.dqn_latency || "8ms" }, { label: "Max Press.", value: "Opt." }]
+    },
+    {
+      title: "Safety Controller",
+      icon: <Watch className="w-5 h-5 text-emerald-600" />,
+      stats: [{ label: "Watchdog", value: sensors?.watchdog || "OK" }, { label: "Darkening", value: "10s lock" }]
+    },
+    {
+      title: "Intersection Mesh",
+      icon: <Wifi className="w-5 h-5 text-violet-500" />,
+      stats: [{ label: "V2X Sync", value: sensors?.v2x_sync || "3ms" }, { label: "Corridor", value: "Idle" }]
     },
   ]
 

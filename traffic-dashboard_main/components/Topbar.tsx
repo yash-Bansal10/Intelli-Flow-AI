@@ -45,16 +45,7 @@ export function Topbar() {
       </div>
 
       <div className="flex items-center gap-4 sm:gap-6">
-        {/* Live Agents Status */}
-        <div className="hidden md:flex items-center gap-2 bg-slate-50/50 backdrop-blur-sm border border-slate-200/50 rounded-full px-3 py-1 shadow-inner">
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Agents</span>
-          <div className="flex items-center gap-1.5 ml-1">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-[pulse_2s_ease-in-out_infinite]" title="Agent 1"></div>
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-[pulse_2.2s_ease-in-out_infinite_0.2s]" title="Agent 2"></div>
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-[pulse_2.1s_ease-in-out_infinite_0.4s]" title="Agent 3"></div>
-            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-[pulse_2.3s_ease-in-out_infinite_0.6s]" title="Agent 4"></div>
-          </div>
-        </div>
+        {/* Live Agents Status removed per user request */}
 
         {/* IST Clock */}
         <div className="text-sm font-mono font-medium text-slate-700 bg-slate-100 px-3 py-1 rounded-md border border-slate-200 shadow-inner">
