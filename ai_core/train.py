@@ -102,27 +102,31 @@ if __name__ == "__main__":
 
         for time in range(env.max_steps):
             # 1. Collect actions from all agents
+            import api_server
+            overrides = api_server.manual_overrides
+            
             actions = {}
             for jid, agent in agents.items():
                 if global_watchdog.is_crashed(jid):
                     # Edge failure! Fallback to local timer
                     time_in_phase = env.junction_states[jid]["time_in_phase"]
                     actions[jid] = global_watchdog.get_fallback_action(jid, time_in_phase)
+                elif overrides.get(jid) == "fixed_timer":
+                    # Fully disconnect from DQN and use the dedicated env fallback function
+                    env.run_fixed_timer(jid, 60)
                 else:
                     actions[jid] = agent.act(states[jid])
             
             # 2. Step environment
             next_states, rewards, dones = env.step(actions)
 
-            # 2b. Compute avg real confidence from all non-crashed agents
+            # 2b. Compute avg real confidence from all non-crashed non-overriden agents
             confidences = [
                 agents[jid].get_confidence()
                 for jid in agents
-                if not global_watchdog.is_crashed(jid)
+                if not global_watchdog.is_crashed(jid) and jid in actions
             ]
             avg_conf = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
-            # Push confidence score into the live_data without overwriting everything else
-            # We do a targeted field update via a helper in api_server
             with __import__('api_server').data_lock:
                 __import__('api_server').live_data['avg_confidence'] = avg_conf
 
@@ -138,8 +142,8 @@ if __name__ == "__main__":
             for jid, agent in agents.items():
                 n_state = np.reshape(next_states[jid], [1, state_sizes[jid]])
                 
-                # Day 6/8: Skip learning if junction is in Emergency Override or if the agent algorithm crashed.
-                if jid not in active_emergencies and not global_watchdog.is_crashed(jid):
+                # Skip learning if junction is in Emergency Override, agent crashed, or node is overridden to fixed timer
+                if jid not in active_emergencies and not global_watchdog.is_crashed(jid) and jid in actions:
                     agent.remember(states[jid], actions[jid], rewards[jid], n_state, dones[jid])
                 else:
                     # We still update the local state so the next 'step' is accurate

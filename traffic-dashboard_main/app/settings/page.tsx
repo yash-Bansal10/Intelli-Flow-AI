@@ -8,9 +8,7 @@ import { useHardwareHealth } from "@/context/HardwareHealthContext"
 const STORAGE_KEY = "intelliflow_settings_junction"
 
 export default function SettingsPage() {
-  const [overrideActive, setOverrideActive] = useState(false)
-
-  // Persist selected junction across tab navigation
+  // Hardware Diagnostics State
   const [selectedJunction, setSelectedJunction] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem(STORAGE_KEY) || ""
@@ -36,15 +34,55 @@ export default function SettingsPage() {
     }
   }, [simulationData, injectSpatialDictionary])
 
+  const getJunctionName = (id: string) => {
+    return simulationData?.spatial_dictionary?.junction_names?.[id] || junctionNames[id] || id
+  }
+
   const junctionIds = simulationData?.junctions ? Object.keys(simulationData.junctions) : []
 
-  // Sync selections to localStorage whenever they change
+  // Sync hardware selections to localStorage whenever they change
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, selectedJunction)
       localStorage.setItem("intelliflow_selected_region", selectedRegion)
     }
   }, [selectedJunction, selectedRegion])
+
+  // --- Manual Override State ---
+  const [overrideRegion, setOverrideRegion] = useState<string>("")
+  const [overrideJunction, setOverrideJunction] = useState<string>("")
+  const [overrides, setOverrides] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    const fetchOverrides = async () => {
+      try {
+        const url = process.env.NEXT_PUBLIC_SIM_API_URL || "http://localhost:5000"
+        const res = await fetch(`${url}/get_overrides`)
+        if (res.ok) setOverrides(await res.json())
+      } catch (err) {}
+    }
+    fetchOverrides()
+    const interval = setInterval(fetchOverrides, 3000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const isFixedTimer = overrideJunction ? overrides[overrideJunction] === "fixed_timer" : false
+
+  const toggleOverride = async () => {
+    if (!overrideJunction) return
+    const newMode = isFixedTimer ? "dqn" : "fixed_timer"
+    setOverrides(prev => ({ ...prev, [overrideJunction]: newMode })) // Optimistic UI
+    try {
+      const url = process.env.NEXT_PUBLIC_SIM_API_URL || "http://localhost:5000"
+      const tRes = await fetch(`${url}/get_token`)
+      const { token } = await tRes.json()
+      await fetch(`${url}/set_override_mode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ junction_id: overrideJunction, mode: newMode })
+      })
+    } catch (err) {}
+  }
 
   // Derivative Lists
   const allJunctionIds = simulationData?.junctions ? Object.keys(simulationData.junctions) : []
@@ -54,10 +92,16 @@ export default function SettingsPage() {
     allJunctionIds.map(id => junctionCities[id]).filter(Boolean)
   ))
 
-  // Filter junctions by selected region
+  // Filter junctions by selected region for Hardware Panel
   const filteredJunctionIds = allJunctionIds.filter(id => {
     if (!selectedRegion) return true // Show all if no region selected (fallback)
     return junctionCities[id] === selectedRegion
+  })
+
+  // Filter junctions by selected region for Override Panel
+  const filteredOverrideJunctionIds = allJunctionIds.filter(id => {
+    if (!overrideRegion) return true
+    return junctionCities[id] === overrideRegion
   })
 
   // If simulation restarts and previously selected junction no longer exists, reset
@@ -84,32 +128,65 @@ export default function SettingsPage() {
         <p className="text-slate-500 font-medium">Runtime Overrides and Hardware Fault Injection</p>
       </div>
 
-      {/* Runtime Controls - Manual Override (Full Width) */}
-      <div className={`bg-white border rounded-2xl p-6 shadow-sm relative overflow-hidden transition-all ${overrideActive ? 'border-rose-200' : 'border-gray-200'} h-32 flex items-center`}>
-        <div className={`absolute inset-0 bg-rose-50/60 transition-opacity duration-500 ${overrideActive ? 'opacity-100 animate-pulse' : 'opacity-0'}`} />
-        <div className="relative z-10 flex items-center justify-between w-full">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-rose-100 rounded-xl border border-rose-200/50 shadow-sm">
-                <ShieldAlert className="w-5 h-5 text-rose-600" />
+      {/* Runtime Controls - Manual Override */}
+      <div className={`bg-white border rounded-3xl p-8 shadow-sm relative overflow-hidden transition-all ${isFixedTimer ? 'border-rose-300 shadow-[0_0_15px_rgba(244,63,94,0.1)]' : 'border-gray-200'}`}>
+        <div className={`absolute inset-0 bg-rose-50/60 transition-opacity duration-500 ${isFixedTimer ? 'opacity-100' : 'opacity-0'}`} />
+        <div className="relative z-10 flex flex-col gap-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between w-full gap-4">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-xl border shadow-sm transition-colors ${isFixedTimer ? 'bg-rose-100 border-rose-200 text-rose-600 animate-pulse' : 'bg-slate-50 border-slate-100 text-slate-400'}`}>
+                <ShieldAlert className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900">Manual Override</h3>
-                <p className="text-xs text-slate-500 font-medium mt-0.5 max-w-[200px] leading-tight">Bypass DQN logic across the entire edge cluster.</p>
+                <h3 className="font-bold text-slate-900 text-lg">AI Manual Override</h3>
+                <p className={`text-sm font-medium mt-0.5 ${isFixedTimer ? 'text-rose-600' : 'text-slate-500'}`}>Disconnect specific junctions from AI to use a fixed fallback timer.</p>
               </div>
             </div>
+            
             <button
-              onClick={() => setOverrideActive(!overrideActive)}
-              className={`px-4 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm border active:scale-[0.97] ${
-                overrideActive
-                  ? 'bg-white text-rose-600 border-rose-200 hover:bg-rose-50'
-                  : 'bg-slate-900 text-white border-transparent hover:bg-slate-800'
-              }`}
+              onClick={toggleOverride}
+              className={`px-6 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-all shadow-sm border active:scale-[0.97] shrink-0 ${
+                isFixedTimer
+                  ? 'bg-rose-600 text-white border-rose-500 hover:bg-rose-700 shadow-md'
+                  : 'bg-white text-slate-700 border-gray-300 hover:bg-slate-50'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={!overrideJunction}
             >
-              <AlertTriangle className={`w-4 h-4 ${overrideActive ? 'animate-bounce' : ''}`} />
-              {overrideActive ? "Disengage" : "Engage"}
+              <AlertTriangle className={`w-4 h-4 ${isFixedTimer ? 'animate-bounce text-rose-200' : 'text-slate-400'}`} />
+              {isFixedTimer ? "Restore DQN Agent" : "Engage 60s Fixed Timer"}
             </button>
           </div>
+          
+          {/* Override Selectors */}
+          <div className="flex flex-col md:flex-row items-center gap-4 bg-white/60 p-3 rounded-2xl border border-slate-200 w-full md:w-auto self-start backdrop-blur-sm shadow-sm">
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 whitespace-nowrap">Target Region:</label>
+              <select
+                value={overrideRegion}
+                onChange={(e) => { setOverrideRegion(e.target.value); setOverrideJunction("") }}
+                className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-rose-500 focus:border-rose-500 p-2 font-bold shadow-sm outline-none w-full md:w-40"
+              >
+                <option value="">All Regions</option>
+                {activeRegions.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+            <div className="w-[1px] h-6 bg-slate-200 hidden md:block" />
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <label className="text-[10px] font-bold text-slate-400 uppercase ml-1 whitespace-nowrap">Target Node:</label>
+              <select
+                value={overrideJunction}
+                onChange={(e) => setOverrideJunction(e.target.value)}
+                className="bg-white border border-slate-200 text-slate-900 text-sm rounded-xl focus:ring-rose-500 focus:border-rose-500 p-2 font-bold shadow-sm outline-none w-full md:w-64 truncate"
+              >
+                <option value="">Select Intersection to Override</option>
+                {filteredOverrideJunctionIds.map(id => (
+                  <option key={id} value={id}>{getJunctionName(id)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
+      </div>
 
       {/* Hardware Diagnostic Section */}
       <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
@@ -156,7 +233,7 @@ export default function SettingsPage() {
                 <option value="">{filteredJunctionIds.length === 0 ? "No Nodes Found" : "Select Intersection"}</option>
                 {filteredJunctionIds.map(id => (
                   <option key={id} value={id}>
-                    {junctionNames[id] || id}
+                    {getJunctionName(id)}
                   </option>
                 ))}
               </select>

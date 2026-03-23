@@ -35,6 +35,9 @@ data_lock = threading.Lock()
 # Format: {"B2": {"direction": "NS", "active": True}}
 emergency_registry = {}
 
+# User Overrides for DQN
+manual_overrides = {}
+
 # This dictionary is our global data store. The AI will write to it, and the API will read from it.
 live_data = {
     "simulation_time":0,
@@ -50,6 +53,24 @@ spawn_queue = []
 # Create the Flask web server application 
 app = Flask(__name__)
 CORS(app)
+
+@app.route('/set_override_mode', methods=['POST'])
+@token_required
+def set_override_mode():
+    data = request.json
+    jid = data.get("junction_id")
+    mode = data.get("mode") # "dqn" or "fixed_timer"
+    with data_lock:
+        if mode == "fixed_timer":
+            manual_overrides[jid] = "fixed_timer"
+        else:
+            manual_overrides.pop(jid, None)
+    return jsonify({"status": "success", "overrides": manual_overrides})
+
+@app.route('/get_overrides', methods=['GET'])
+def get_overrides():
+    with data_lock:
+        return jsonify(manual_overrides)
 
 # Define the single API endpoint that the dashboard will call
 # @app.route('/live_data')

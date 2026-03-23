@@ -343,6 +343,40 @@ class TrafficEnv:
             return best_phase
         except: return None
 
+    def run_fixed_timer(self, jid, timer=60):
+        """
+        Dedicated fixed timer function that bypasses DQN logic entirely.
+        This cleanly separates AI actions from a classic timer-based loop.
+        """
+        if jid not in self.junction_states: return
+        
+        # 1. Respect emergency vehicles even in fixed-timer mode
+        all_e = self.get_emergency_status()
+        if jid in all_e:
+            amb_phase = self._get_ambulance_phase(jid, all_e[jid].get("route", []))
+            if amb_phase is not None:
+                traci.trafficlight.setPhase(jid, amb_phase)
+                self.junction_states[jid]["phase"] = amb_phase
+                self.junction_states[jid]["time_in_phase"] = 0
+                return
+
+        # 2. Proceed with fixed timer logic
+        p_map = self.junction_states[jid]["phases_map"]
+        self.junction_states[jid]["time_in_phase"] += self.frame_skip
+        
+        if self.junction_states[jid]["time_in_phase"] >= timer:
+            curr_p = self.junction_states[jid]["phase"]
+            
+            # Swap to the opposite default green phase
+            if curr_p in p_map["NS"]:
+                best_p = p_map["EW"][0]
+            else:
+                best_p = p_map["NS"][0]
+                
+            traci.trafficlight.setPhase(jid, best_p)
+            self.junction_states[jid]["phase"] = best_p
+            self.junction_states[jid]["time_in_phase"] = 0
+
     def step(self, actions):
         if not isinstance(actions, dict): actions = {self.main_jid: actions}
         

@@ -41,17 +41,15 @@ class DQNAgent:
         self.memory.append((state, action, reward, next_state, done))
 
     def act(self, state):
-        if np.random.rand() <= self.epsilon:
-            self._last_confidence = 0.0  # Random action = no model confidence
-            return random.randrange(self.action_size)
         act_values = self.model.predict(state, verbose=0)
-        best_action = np.argmax(act_values[0])
-        # Softmax to get probability distribution, confidence = P(chosen action) * 100
         q = act_values[0]
         q_shifted = q - np.max(q)  # numerical stability
         softmax = np.exp(q_shifted) / np.sum(np.exp(q_shifted))
-        self._last_confidence = float(softmax[best_action] * 100)
-        return best_action
+        self._last_confidence = float(np.max(softmax) * 100)
+
+        if np.random.rand() <= self.epsilon:
+            return random.randrange(self.action_size)
+        return np.argmax(act_values[0])
 
     def get_confidence(self) -> float:
         """Returns the model's confidence (0-100%) for the last chosen action.
