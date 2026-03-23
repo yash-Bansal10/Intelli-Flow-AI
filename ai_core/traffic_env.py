@@ -65,6 +65,7 @@ class TrafficEnv:
         self.max_steps = 2500 
         self.frame_skip = 5 
         self.lane_pcu_cache = {}
+        self.colored_edges = set()
         
         if junction_ids is None:
             self.junction_ids = traci.trafficlight.getIDList()
