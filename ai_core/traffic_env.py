@@ -110,7 +110,10 @@ class TrafficEnv:
         atlas = {}
         if os.path.exists(atlas_path):
             try:
-                with open(atlas_path, 'r') as f: atlas = json.load(f)
+                with open(atlas_path, 'r') as f: 
+                    atlas = json.load(f)
+                    if len(atlas) > 0:
+                        return atlas # Strictly persist user's manual names without appending
             except: pass
             
         region = "Connaught Place, Delhi" if "connaught" in self.map_name.lower() else "Urban Sector, India"

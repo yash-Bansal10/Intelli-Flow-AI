@@ -89,7 +89,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
       const radius = isEmergencyActive ? 16 : 10
 
       const malCount = getMalfunctionCount(jid)
-      const jName = junctionNames[jid] || jid // Use real-world name from atlas if available
+      const jName = simulationData?.spatial_dictionary?.junction_names?.[jid] || junctionNames[jid] || jid // Use real-world name from atlas if available
 
       // Create or update marker
       if (!markersRef.current[jid]) {
