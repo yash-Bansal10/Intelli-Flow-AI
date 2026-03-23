@@ -15,6 +15,7 @@ export interface SimulationState {
   simulation_time: number
   junctions: Record<string, JunctionData>
   total_congestion: number
+  avg_confidence?: number  // Real DQN softmax confidence (0–100%), added by train.py each step
   spatial_dictionary?: {
     junction_names: Record<string, string>
     junction_cities: Record<string, string>

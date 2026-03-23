@@ -1,5 +1,3 @@
-# train.py
-
 from dqn_agent import DQNAgent
 from traffic_env import TrafficEnv
 import numpy as np
@@ -8,6 +6,7 @@ import os
 import json
 import argparse
 from security.watchdog import global_watchdog
+from api_server import update_live_data
 
 if __name__ == "__main__":
     # --- COMMAND LINE ARGUMENTS ---
@@ -114,7 +113,19 @@ if __name__ == "__main__":
             
             # 2. Step environment
             next_states, rewards, dones = env.step(actions)
-            
+
+            # 2b. Compute avg real confidence from all non-crashed agents
+            confidences = [
+                agents[jid].get_confidence()
+                for jid in agents
+                if not global_watchdog.is_crashed(jid)
+            ]
+            avg_conf = round(sum(confidences) / len(confidences), 1) if confidences else 0.0
+            # Push confidence score into the live_data without overwriting everything else
+            # We do a targeted field update via a helper in api_server
+            with __import__('api_server').data_lock:
+                __import__('api_server').live_data['avg_confidence'] = avg_conf
+
             # 3. Process outcomes
             if not isinstance(next_states, dict):
                 next_states = {env.main_jid: next_states}

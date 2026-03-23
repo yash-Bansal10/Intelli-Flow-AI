@@ -7,6 +7,7 @@ import sys
 import os
 import time
 import random
+import json
 
 # Day 1: Fix imports for cross-directory execution
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -95,10 +96,51 @@ class TrafficEnv:
         
         self._setup_subscriptions()
         
-        self.main_jid = self.junction_ids[0]
-        self.colored_edges = set() 
         self.all_edges = [e for e in traci.edge.getIDList() if not e.startswith(":")]
+        
+        # Day 9: Spatial Atlas & Geocoding
+        self.map_name = map_name
+        self.spatial_atlas = self._init_spatial_atlas()
         self.ambulance_spawn_chance = 0.03 # Trigger constant ambient deployment per user request
+
+    def _init_spatial_atlas(self):
+        """Day 9: Initializes the real-world naming atlas with local caching."""
+        atlas_path = os.path.join(script_dir, "junction_atlas.json")
+        atlas = {}
+        if os.path.exists(atlas_path):
+            try:
+                with open(atlas_path, 'r') as f: atlas = json.load(f)
+            except: pass
+            
+        region = "Connaught Place, Delhi" if "connaught" in self.map_name.lower() else "Urban Sector, India"
+        
+        # Identify name-less junctions and try to give them a 'Pretty ID' or real name
+        changed = False
+        for jid in self.junction_ids:
+            if jid not in atlas:
+                x, y = self.junction_pos[jid]
+                lon, lat = traci.simulation.convertGeo(x, y)
+                # Static mapping for the demo map to ensure 100% accuracy
+                if "connaught" in self.map_name.lower():
+                    # Heuristic mapping for a few key CP junctions if they use standard internal IDs
+                    standard_names = {
+                        "GS_A": "Janpath / Inner Circle",
+                        "GS_B": "Barakhamba / Outer Circle",
+                        "GS_C": "K.G. Marg / Outer Circle",
+                        "GS_D": "Parliament St / Inner Circle"
+                    }
+                    name = standard_names.get(jid, f"Junction {jid}")
+                else:
+                    name = f"Junction {jid}"
+                
+                atlas[jid] = {"name": name, "region": region, "lat": lat, "lon": lon}
+                changed = True
+        
+        if changed:
+            try:
+                with open(atlas_path, 'w') as f: json.dump(atlas, f, indent=2)
+            except: pass
+        return atlas
 
     def get_emergency_status(self):
         """Proxy method for training script to check API status."""
@@ -407,7 +449,11 @@ class TrafficEnv:
         update_live_data({
             "simulation_time": self.current_step,
             "junctions": city,
-            "total_congestion": int(tot_p)
+            "total_congestion": int(tot_p),
+            "spatial_dictionary": {
+                "junction_names": {jid: data["name"] for jid, data in self.spatial_atlas.items()},
+                "junction_cities": {jid: data["region"] for jid, data in self.spatial_atlas.items()}
+            }
         })
         d = self.current_step >= self.max_steps
         if len(self.junction_ids) == 1: return ns, rew[self.main_jid], d

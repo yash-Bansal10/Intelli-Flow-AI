@@ -21,7 +21,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
   const faultMarkersRef = useRef<Record<string, L.Marker>>({})
   const boundsSet = useRef(false)
   
-  const { getMalfunctionCount } = useHardwareHealth()
+  const { getMalfunctionCount, healthState, junctionNames } = useHardwareHealth()
 
   // Initialize Map Once
   useEffect(() => {
@@ -89,7 +89,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
       const radius = isEmergencyActive ? 16 : 10
 
       const malCount = getMalfunctionCount(jid)
-      const jName = jid // Show SUMO node ID directly
+      const jName = junctionNames[jid] || jid // Use real-world name from atlas if available
 
       // Create or update marker
       if (!markersRef.current[jid]) {
@@ -154,10 +154,13 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
         marker.setTooltipContent(updateTooltip(jName, color, data.score, data.phase))
       }
 
-      // Day 9: Severity Fault Indicators (Yellow/Red Alerts)
+      // Day 9: Severity Fault Indicators — RED for critical HW, YELLOW for non-critical
+      const CRITICAL_HW = ["Vision AI (YOLOv11)", "IP Cameras (RTSP)", "PCU Calculator"]
       if (malCount > 0) {
-        const alertColor = malCount > 2 ? "#ef4444" : "#f59e0b" // Red or Yellow
-        const pulseClass = malCount > 2 ? "animate-pulse" : ""
+        const hwMap = healthState[jid] || {}
+        const hasCriticalFault = CRITICAL_HW.some(hw => hwMap[hw] === false)
+        const alertColor = hasCriticalFault ? "#ef4444" : "#f59e0b"
+        const pulseClass = hasCriticalFault ? "animate-pulse" : ""
         
         const faultIcon = L.divIcon({
           className: 'custom-fault-icon',

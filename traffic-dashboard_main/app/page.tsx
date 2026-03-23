@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AlertCircle, Flame, ShieldAlert, Zap } from "lucide-react"
 import { JunctionDrawer } from "@/components/JunctionDrawer"
 import { motion, AnimatePresence } from "framer-motion"
@@ -16,6 +16,15 @@ export default function TrafficOverview() {
   const [isEmergencyActive, setIsEmergencyActive] = useState(false)
   const [selectedJunctionId, setSelectedJunctionId] = useState<string | null>(null)
   const { data: simulationData } = useSimData()
+
+  // Auto-open junction drawer when navigated here from Topbar fault alert
+  useEffect(() => {
+    const pendingJunction = sessionStorage.getItem('intelliflow_open_junction')
+    if (pendingJunction) {
+      sessionStorage.removeItem('intelliflow_open_junction')
+      setSelectedJunctionId(pendingJunction)
+    }
+  }, [])
 
   return (
     <div className="w-full h-[calc(100vh-4rem)] relative flex flex-col overflow-hidden">
