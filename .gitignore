@@ -27,3 +27,5 @@ models/
 ai_core/models/
 *.weights.h5
 *.weights.h5.bak
+
+__pycache__/
