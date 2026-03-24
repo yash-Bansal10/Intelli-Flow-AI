@@ -24,7 +24,8 @@ PCU_MAP = {
 }
 
 class TrafficEnv:
-    def __init__(self, use_gui=True, map_name="4X4_grid", junction_ids=None):
+    def __init__(self, use_gui=True, map_name="connaught_place", junction_ids=None, mode="training"):
+        self.mode = mode
         if 'SUMO_HOME' in os.environ:
             sys.path.append(os.path.join(os.environ['SUMO_HOME'], 'tools'))
         else:
@@ -51,9 +52,10 @@ class TrafficEnv:
         config_path = os.path.join(map_path, configs[0])
         print(f"[Intelli-Flow] Loading Map: {map_name} ({configs[0]})")
         
-        
-        self.sumo_args = ["-c", config_path, "--start", "--quit-on-end"]
-        
+        # Calculate optimal GUI render delay based on mode
+        # 1000ms delay per Traci step forces exactly 1x physical realtime animation
+        render_delay = "0" if self.mode == "training" else "1000"
+        self.sumo_args = ["-c", config_path, "--start", "--quit-on-end", "--delay", render_delay]
         
         if not use_gui:
             self.sumo_args.append("--no-step-log")
@@ -62,7 +64,7 @@ class TrafficEnv:
         traci.start([self.sumoBinary] + self.sumo_args)
         
         self.current_step = 0
-        self.max_steps = 2500 
+        self.max_steps = 1000 
         self.frame_skip = 5 
         self.lane_pcu_cache = {}
         self.colored_edges = set()
@@ -72,6 +74,8 @@ class TrafficEnv:
             print(f"[Intelli-Flow] Autonomous Discovery: Found {len(self.junction_ids)} junctions")
         else:
             self.junction_ids = junction_ids
+            
+        self.main_jid = self.junction_ids[0] if len(self.junction_ids) > 0 else "main"
             
         self.junction_pos = {}
         for jid in self.junction_ids:
@@ -385,7 +389,6 @@ class TrafficEnv:
             self._trigger_random_emergency()
 
         all_e = self.get_emergency_status()
-        if all_e and getattr(self, 'gui', False): time.sleep(0.1)
         
         self._process_spawn_requests()
         self._auto_release_emergencies(all_e)
@@ -437,8 +440,6 @@ class TrafficEnv:
         
         for _ in range(self.frame_skip):
             traci.simulationStep()
-            if self.use_gui:
-                time.sleep(1) # 1x Real-Time locking
 
         self.current_step += self.frame_skip
         rew, ns = {}, self._get_state()

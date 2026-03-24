@@ -19,6 +19,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
   const mapInstance = useRef<L.Map | null>(null)
   const markersRef = useRef<Record<string, L.CircleMarker>>({})
   const faultMarkersRef = useRef<Record<string, L.Marker>>({})
+  const evpMarkersRef = useRef<Record<string, L.Marker>>({})
   const boundsSet = useRef(false)
   
   const { getMalfunctionCount, healthState, junctionNames } = useHardwareHealth()
@@ -85,8 +86,9 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
         color = '#10b981' // Green — clear
       }
       // Emergency overrides all
-      if (isEmergencyActive) color = '#ef4444'
-      const radius = isEmergencyActive ? 16 : 10
+      const isEvpActive = data.is_emergency === true
+      if (isEvpActive) color = '#ef4444' // Bright Red
+      const radius = isEvpActive ? 16 : (isEmergencyActive ? 16 : 10)
 
       const malCount = getMalfunctionCount(jid)
       const jName = simulationData?.spatial_dictionary?.junction_names?.[jid] || junctionNames[jid] || jid // Use real-world name from atlas if available
@@ -111,6 +113,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
                <p style="margin: 0; color: #64748b; font-size: 11px; font-weight: 600;">Phase: ${ph}</p>
             </div>
             <p style="margin: 0; color: #64748b; font-size: 11px;">AI Congestion: <strong>${Math.floor(s)}</strong></p>
+            ${isEvpActive ? '<p style="margin: 4px 0 0 0; color: #ef4444; font-size: 10px; font-weight: 800; text-transform: uppercase;">🚨 EVP OVERRIDE ACTIVE</p>' : ''}
             <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Click for Live Telemetry</p>
           </div>
         `
@@ -148,6 +151,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
                <p style="margin: 0; color: #64748b; font-size: 11px; font-weight: 600;">Phase: ${ph}</p>
             </div>
             <p style="margin: 0; color: #64748b; font-size: 11px;">AI Congestion: <strong>${Math.floor(s)}</strong></p>
+            ${isEvpActive ? '<p style="margin: 4px 0 0 0; color: #ef4444; font-size: 10px; font-weight: 800; text-transform: uppercase;">🚨 EVP OVERRIDE ACTIVE</p>' : ''}
             <p style="margin: 4px 0 0 0; color: #3b82f6; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em;">Click for Live Telemetry</p>
           </div>
         `
@@ -182,10 +186,37 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
           faultMarkersRef.current[jid].setIcon(faultIcon)
         }
       } else {
-        // Clear marker if fixed
         if (faultMarkersRef.current[jid]) {
           faultMarkersRef.current[jid].remove()
           delete faultMarkersRef.current[jid]
+        }
+      }
+
+      // EVP Icon Overlays
+      if (isEvpActive) {
+        const evpIcon = L.divIcon({
+          className: 'custom-evp-icon',
+          html: `
+            <div class="flex items-center justify-center animate-bounce shadow-xl bg-white rounded-full p-1 border-2 border-red-500" style="filter: drop-shadow(0 4px 6px rgba(225,29,72,0.6));">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11h12Z"/><path d="M14 8h5.36a2 2 0 0 1 1.76 1.05l3 6A2 2 0 0 1 24 16v2h-10"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 8h4"/><path d="M10 6v4"/>
+              </svg>
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 40], // Stack slightly higher than the map circle
+        })
+
+        if (!evpMarkersRef.current[jid]) {
+          evpMarkersRef.current[jid] = L.marker([data.lat, data.lng], { icon: evpIcon, interactive: false }).addTo(map)
+        } else {
+          evpMarkersRef.current[jid].setLatLng([data.lat, data.lng])
+          evpMarkersRef.current[jid].setIcon(evpIcon)
+        }
+      } else {
+        if (evpMarkersRef.current[jid]) {
+          evpMarkersRef.current[jid].remove()
+          delete evpMarkersRef.current[jid]
         }
       }
     })

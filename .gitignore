@@ -22,10 +22,4 @@ Technical_manifest.md
 ai_core/training_scores.txt
 ai_core/learning_curve.png
 
-# ML Models (Ignore all weights to prevent repo bloat)
-models/
-ai_core/models/
-*.weights.h5
-*.weights.h5.bak
-
 __pycache__/

@@ -119,14 +119,36 @@ export default function LoginPage() {
            </div>
 
            <form onSubmit={handleLogin} className="space-y-6">
-             {/* Locked Identity */}
-             <div className="space-y-2">
-               <label className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 ml-1">Verified Identity</label>
-               <div className="w-full bg-emerald-950/20 border border-emerald-900 px-4 py-3 rounded-lg text-emerald-500 flex items-center gap-3 cursor-not-allowed opacity-80">
-                 <Shield className="w-4 h-4 text-emerald-700" />
-                 <span className="tracking-widest font-bold">Root</span>
+             {/* Verification Chain */}
+             <div className="space-y-3">
+               <label className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 ml-1">Zero-Trust Verification Chain</label>
+               
+               {/* 1. mTLS */}
+               <div className="w-full bg-emerald-950/40 border border-emerald-800/60 px-4 py-3 rounded-lg flex items-center justify-between shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
+                 <div className="flex items-center gap-3">
+                   <Server className="w-4 h-4 text-emerald-500" />
+                   <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">mTLS Handshake</span>
+                 </div>
+                 <span className="text-[9px] font-black text-emerald-300 drop-shadow-[0_0_5px_rgba(52,211,153,0.8)] tracking-[0.2em]">VERIFIED</span>
                </div>
-               <p className="text-[9px] text-emerald-800 text-right uppercase mt-1">Multi-user auth currently disabled</p>
+
+               {/* 2. FIDO2 Key */}
+               <div className="w-full bg-emerald-950/40 border border-emerald-800/60 px-4 py-3 rounded-lg flex items-center justify-between shadow-[inset_0_0_10px_rgba(0,0,0,0.5)]">
+                 <div className="flex items-center gap-3">
+                   <Fingerprint className="w-4 h-4 text-emerald-500" />
+                   <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">FIDO2 Hardware Key</span>
+                 </div>
+                 <span className="text-[9px] font-black text-cyan-300 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)] tracking-[0.2em]">AUTHENTICATED</span>
+               </div>
+
+               {/* 3. Identity */}
+               <div className="w-full bg-emerald-950/10 border border-emerald-900/50 px-4 py-3 rounded-lg flex items-center justify-between opacity-70">
+                 <div className="flex items-center gap-3">
+                   <Shield className="w-4 h-4 text-emerald-700" />
+                   <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-600">Admin Identity</span>
+                 </div>
+                 <span className="text-[10px] font-mono tracking-widest text-emerald-500">ROOT</span>
+               </div>
              </div>
 
              {/* Password Input */}

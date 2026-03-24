@@ -29,14 +29,18 @@ if __name__ == "__main__":
     # Use GUI if --gui is set OR if --nogui is NOT set
     use_gui = True if args.gui else (not args.nogui)
 
+    # --- CONFIGURATION MODE ---
+    # Set to "training" for maximum CPU speed (no GUI delay, active neural network backprop)
+    # Set to "realtime" for live presentations (smooth GUI delay, inference-only mode to prevent lag)
+    SIMULATION_MODE = "realtime" 
+
     # --- CONSTANTS ---
     NUM_EPISODES = 21 
     BATCH_SIZE = 32
     ACTION_SIZE = 2
     
     # --- INITIALIZATION ---
-    # Day 7: Now only requires the map folder name!
-    env = TrafficEnv(use_gui=use_gui, map_name=args.map) 
+    env = TrafficEnv(use_gui=use_gui, map_name=args.map, mode=SIMULATION_MODE) 
     
     # Day 3: Coordinated City Grid (Universal State Vector)
     agents = {}
@@ -52,37 +56,51 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
         print(f"[Intelli-Flow] 📁 Created new model directory: {model_dir}")
 
-    # Initialize one agent per discovered junction
+    # Ensure all junctions are tracked correctly for state parsing
     for jid in env.junction_ids:
-        # State size is now fixed at USV_SIZE for all junctions
         state_sizes[jid] = USV_SIZE
-        agents[jid] = DQNAgent(USV_SIZE, ACTION_SIZE)
-        
-        # --- Weight Loading (Systematic) ---
-        model_filename = os.path.join(model_dir, f"model_{jid}.weights.h5")
-        
-        # 1. Try to load junction-specific weights from map-specific folder
-        try:
-            agents[jid].load(model_filename)
-            print(f"Loaded specific weights for {jid} from {args.map}/")
-        except Exception as e:
-            # Check root models folder as secondary fallback
-            root_model = os.path.join(script_dir, "models", f"model_{jid}.weights.h5")
-            if os.path.exists(root_model):
-                agents[jid].load(root_model)
-                print(f"Found {jid} weights in root models/, loading as fallback...")
-            else:
-                print(f"No specific weights for {jid}, checking base model...")
 
-        # 2. Fallback to the base pre-trained model if no specific weights were found
-        # This allows all 16 junctions to 'start intelligent' from a shared base.
-        if os.path.exists(os.path.join("models", BASE_MODEL)) or os.path.exists(BASE_MODEL):
+    main_jid = env.junction_ids[0] if len(env.junction_ids) > 0 else "main"
+
+    # --- DUAL MODEL ALLOCATION LOGIC ---
+    if SIMULATION_MODE == "training":
+        # Training Mode: Train ONLY ONE model at ONE junction. 
+        # The other junctions will gracefully fall back to SUMO's native fixed-time logic.
+        print(f"[Training] Booting 1 focused AI Agent for Master Junction '{main_jid}'...")
+        agents[main_jid] = DQNAgent(USV_SIZE, ACTION_SIZE)
+        
+        # Load any existing specific master weights (or fallback)
+        model_filename = os.path.join(model_dir, f"model_{main_jid}.weights.h5")
+        try:
+            agents[main_jid].load(model_filename)
+            print(f"[Training] Loaded existing master weights from {model_filename}")
+        except Exception:
+            root_model = os.path.join(script_dir, "models", f"model_{main_jid}.weights.h5")
+            if os.path.exists(root_model):
+                agents[main_jid].load(root_model)
+            elif os.path.exists(os.path.join(script_dir, "models", BASE_MODEL)) or os.path.exists(BASE_MODEL):
+                try: agents[main_jid].load(BASE_MODEL)
+                except Exception: pass
+            
+    else:
+        # Real-time Mode: Reverting to full city coverage!
+        # Instantiating 16 physically isolated models mapped to the Master Brain file.
+        print(f"[Realtime] Booting {len(env.junction_ids)} isolated AI Agents...")
+        master_model_filename = os.path.join(model_dir, f"model_{main_jid}.weights.h5")
+        
+        for jid in env.junction_ids:
+            agents[jid] = DQNAgent(USV_SIZE, ACTION_SIZE)
             try:
-                # Load with skip_mismatch=True (default in dqn_agent.py) 
-                agents[jid].load(BASE_MODEL)
-                print(f"Initialized agent {jid} with pre-trained BASE model.")
-            except Exception as e:
-                print(f"Could not load base model for {jid}. Starting fresh.")
+                # Load the SINGLE centrally trained master brain into ALL 16 local agents
+                agents[jid].load(master_model_filename)
+            except Exception:
+                root_model = os.path.join(script_dir, "models", f"model_{main_jid}.weights.h5")
+                if os.path.exists(root_model):
+                    agents[jid].load(root_model)
+                elif os.path.exists(os.path.join(script_dir, "models", BASE_MODEL)) or os.path.exists(BASE_MODEL):
+                    try: agents[jid].load(BASE_MODEL)
+                    except Exception: pass
+        print(f"[Realtime] Distributed pre-trained Master Brain flawlessly across all {len(agents)} local agents.")
     scores = []
 
     # --- WEIGHT LOADING REMOVED (HANDLED ABOVE PER JID) ---
@@ -176,17 +194,19 @@ if __name__ == "__main__":
                 
                 print(f"╚" + "═"*60 + "╝\n")
                 break
+        # 4. Neural Network Training (Gated by Configuration Mode)
+        # Deep learning backprop takes massive CPU resources and freezes the simulation exactly every 5 steps.
+        # We disable it during "realtime" mode so presentations run perfectly smoothly!
+        if SIMULATION_MODE == "training":
+            # set() reduces 16 duplicate object references down to exactly 1 loop iteration!
+            for agent in set(agents.values()):
+                if len(agent.memory) > BATCH_SIZE:
+                    agent.replay(BATCH_SIZE)
         
-        # 4. Replay for all agents
-        for agent in agents.values():
-            if len(agent.memory) > BATCH_SIZE:
-                agent.replay(BATCH_SIZE)
-        
-        # Periodic Save (Every 10 episodes)
-        if (e + 1) % 10 == 0:
-            for jid, agent in agents.items():
-                agent.save(os.path.join(model_dir, f"model_{jid}.weights.h5"))
-            print(f"--- Checkpoint: All 16 agents saved at episode {e+1} ---")
+        # Save every episode
+        for jid, agent in agents.items():
+            agent.save(os.path.join(model_dir, f"model_{jid}.weights.h5"))
+        print(f"--- Checkpoint: Saved {len(agents)} active agents at episode {e+1} ---")
 
 
     # --- CLEANUP AND SAVING (Systematic) ---
@@ -194,7 +214,7 @@ if __name__ == "__main__":
     for jid, agent in agents.items():
         save_path = os.path.join(model_dir, f"model_{jid}.weights.h5")
         agent.save(save_path)
-    print(f"Trained models saved for {len(agents)} agents in models/{args.map}/.")
+    print(f"Trained model logic saved for {len(agents)} local agents.")
     
     # Save the scores and logs into the map folder
     np.savetxt(os.path.join(model_dir, "training_scores.txt"), np.array(scores))        

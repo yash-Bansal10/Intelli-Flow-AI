@@ -144,7 +144,15 @@ export function JunctionDrawer({ isOpen, onClose, junctionId }: JunctionDrawerPr
               </div>
               <div className="bg-white/60 backdrop-blur-md border border-slate-200/60 rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all duration-300">
                 <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">DQN AI Engine</h3>
-                <div className="text-2xl font-bold text-sky-500 h-8 flex items-center">{junctionData ? "ACTIVE" : "IDLE"}</div>
+                <div className="text-2xl font-bold h-8 flex items-center">
+                  {junctionData?.is_emergency ? (
+                    <span className="text-rose-500 uppercase tracking-tighter text-xl">Overridden (EVP)</span>
+                  ) : junctionData ? (
+                    <span className="text-sky-500">ACTIVE</span>
+                  ) : (
+                    <span className="text-slate-400">IDLE</span>
+                  )}
+                </div>
                 <p className="text-sm font-mono text-slate-400 mt-3 flex gap-1">Delay Score: <span className="text-slate-700 font-bold">{Math.floor(aiScore)}</span></p>
               </div>
             </motion.div>
