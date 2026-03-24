@@ -1,0 +1,218 @@
+{
+  "1869716862": {
+    "name": "Junction 1869716862",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.63125201353441,
+    "lon": 77.2224344070843
+  },
+  "249783302": {
+    "name": "Junction 249783302",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.631429106561466,
+    "lon": 77.21674218270871
+  },
+  "249783316": {
+    "name": "Junction 249783316",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.635719062202874,
+    "lon": 77.21988333187646
+  },
+  "432874005": {
+    "name": "Junction 432874005",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.635257091801282,
+    "lon": 77.21800552960775
+  },
+  "432874009": {
+    "name": "Junction 432874009",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.641875153871418,
+    "lon": 77.21845478949207
+  },
+  "5792664575": {
+    "name": "Junction 5792664575",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.62881891326078,
+    "lon": 77.22624922336813
+  },
+  "6234228016": {
+    "name": "Junction 6234228016",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.62910230927287,
+    "lon": 77.22659012194076
+  },
+  "6234228017": {
+    "name": "Junction 6234228017",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.628779154194124,
+    "lon": 77.2263626129255
+  },
+  "8490153083": {
+    "name": "Junction 8490153083",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.645959735561874,
+    "lon": 77.2199702524548
+  },
+  "9522075690": {
+    "name": "Junction 9522075690",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.643608964959405,
+    "lon": 77.22279087549357
+  },
+  "9522075691": {
+    "name": "Junction 9522075691",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64348721888185,
+    "lon": 77.22278165961467
+  },
+  "9707091860": {
+    "name": "Junction 9707091860",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.644102816360466,
+    "lon": 77.2001410687539
+  },
+  "9707091861": {
+    "name": "Junction 9707091861",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64425742418544,
+    "lon": 77.20022704101822
+  },
+  "GS_249783308": {
+    "name": "Junction GS_249783308",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.634262237605892,
+    "lon": 77.21714046585447
+  },
+  "GS_309642109": {
+    "name": "Junction GS_309642109",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64514555282698,
+    "lon": 77.19774256380393
+  },
+  "GS_915473666": {
+    "name": "Junction GS_915473666",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.643222150516525,
+    "lon": 77.20360068059271
+  },
+  "GS_915473757": {
+    "name": "Junction GS_915473757",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.643125643054503,
+    "lon": 77.20305494847399
+  },
+  "GS_cluster_11301690339_11301690340_3661513065_3661513066": {
+    "name": "Junction GS_cluster_11301690339_11301690340_3661513065_3661513066",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.627884077644232,
+    "lon": 77.20878078058932
+  },
+  "GS_cluster_13440034865_13440034866_1869716959_450631313": {
+    "name": "Junction GS_cluster_13440034865_13440034866_1869716959_450631313",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.637678180279178,
+    "lon": 77.21165989989714
+  },
+  "GS_cluster_1668978741_458640643": {
+    "name": "Junction GS_cluster_1668978741_458640643",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.635202764235267,
+    "lon": 77.22739720739307
+  },
+  "cluster_10274798174_3947530960_3947530961_432874004_#1more": {
+    "name": "BKS Marg / Hanuman Road Junction",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.63959960341095,
+    "lon": 77.20799243275155
+  },
+  "cluster_11449264972_11449264982_11801983120_11801983121_#10more": {
+    "name": "Gole Market Intersect",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.635895406498303,
+    "lon": 77.20179971262502
+  },
+  "cluster_11726690852_12896534974_13018550234_562591570": {
+    "name": "Bangla Sahib Rd / Ashoka Rd",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.633543041994866,
+    "lon": 77.20856817420452
+  },
+  "cluster_11841197775_1763864242_1763864248_9048339566_#2more": {
+    "name": "Deen Dayal Upadhayay Marg",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.640483536903886,
+    "lon": 77.23153874587652
+  },
+  "cluster_12200007747_12200007768_8490153076_8490153077_#7more": {
+    "name": "Minto Bridge Intersect",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64589364695962,
+    "lon": 77.22024798475707
+  },
+  "cluster_12319493498_12319493500": {
+    "name": "Jai Singh Road / Jantar Mantar",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.627570869200625,
+    "lon": 77.20836179185149
+  },
+  "cluster_12865950983_12865950987_13087429776_5681296956_#1more": {
+    "name": "Tolstoy Marg Junction",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.637628606235992,
+    "lon": 77.22318594296033
+  },
+  "cluster_13078602848_13078602869_395135138_5681296960": {
+    "name": "Vivekanand Marg Crossing",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64094900686114,
+    "lon": 77.22582095343607
+  },
+  "cluster_13078602892_13078602894": {
+    "name": "Ramdwara Junction",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64281780934557,
+    "lon": 77.22664898113563
+  },
+  "cluster_13506319762_13506319763_13506319764_13506319765_#7more": {
+    "name": "Firoz Shah Road",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.626960685431076,
+    "lon": 77.21537835521966
+  },
+  "cluster_249783293_5681450581": {
+    "name": "Kasturba Gandhi Rd Junction",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.62988790049153,
+    "lon": 77.21962547197859
+  },
+  "cluster_291542988_943641155_9798037577_9798089117": {
+    "name": "Panchkuian Road Junction",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.645795156374582,
+    "lon": 77.20965450825848
+  },
+  "cluster_8490153086_8490153087": {
+    "name": "Thomson Road Merge",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.645820078789445,
+    "lon": 77.22059664423769
+  },
+  "joinedS_11187714088_12044574565_5792664573_6234226367_#4more": {
+    "name": "Sikandra Road Flyover",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.628992401460216,
+    "lon": 77.22633275429438
+  },
+  "joinedS_6720393130_6720393131": {
+    "name": "Ashoka Road Circle",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.624851979439743,
+    "lon": 77.20649831994504
+  },
+  "joinedS_6965638588_938409431_cluster_13102809057_291542749_6660061352_6965577684_#4more": {
+    "name": "Rouse Avenue Crossing",
+    "region": "Connaught Place, Delhi",
+    "lat": 28.64498492077532,
+    "lon": 77.22369848153718
+  }
+}

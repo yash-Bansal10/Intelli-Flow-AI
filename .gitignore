@@ -21,13 +21,9 @@ documentation/
 Technical_manifest.md
 ai_core/training_scores.txt
 ai_core/learning_curve.png
-frontend_implementation_plan.md
-hardware_implementation_plan.md
-intelli_flow_master_plan.md
 
 # ML Models (Ignore all weights to prevent repo bloat)
 models/
 ai_core/models/
 *.weights.h5
 *.weights.h5.bak
-*.json
