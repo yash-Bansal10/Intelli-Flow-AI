@@ -106,7 +106,7 @@ class TrafficEnv:
         # Day 9: Spatial Atlas & Geocoding
         self.map_name = map_name
         self.spatial_atlas = self._init_spatial_atlas()
-        self.ambulance_spawn_chance = 0.03 # Trigger constant ambient deployment per user request
+        self.ambulance_spawn_chance = 0.1 # Trigger constant ambient deployment per user request
 
     def _init_spatial_atlas(self):
         """Day 9: Initializes the real-world naming atlas with local caching."""
@@ -395,48 +395,69 @@ class TrafficEnv:
         self._update_junction_visuals(all_e)
         self._update_green_corridors(all_e)
         
+        # 1. TOP-LEVEL EMERGENCY VEHICLE PREEMPTION (EVP)
+        # Bypasses AI jurisdiction and handles all junctions universally
+        for jid in all_e:
+            if jid not in self.junction_states: continue
+            
+            amb_phase = self._get_ambulance_phase(jid, all_e[jid].get("route", []))
+            p_map = self.junction_states[jid]["phases_map"]
+            
+            if amb_phase is not None:
+                best_p = amb_phase
+                if self.current_step % 20 == 0:
+                    print(f"🚦 [EVP ACTIVE] Dynamic Corridor overriding {jid} for {all_e[jid].get('vehicle_id')} (Phase {best_p})")
+            else:
+                # Fallback to absolute strict directional override
+                best_p = p_map["NS"][0] if all_e[jid].get("direction", "NS") == "NS" else p_map["EW"][0]
+
+            # Unconditionally shatter phase safety locks instantly
+            if best_p != self.junction_states[jid]["phase"]:
+                traci.trafficlight.setPhase(jid, best_p)
+                self.junction_states[jid]["phase"] = best_p
+                self.junction_states[jid]["time_in_phase"] = 0
+            else:
+                self.junction_states[jid]["time_in_phase"] += self.frame_skip
+
+
+        # 2. STANDARD AI CONTROLLER LOOP
         for jid, act in actions.items():
             if jid not in self.junction_states: continue
             
-            p_map = self.junction_states[jid]["phases_map"]
-            selected_by_agent = True
+            # Immediately yield control if an ambulance just hijacked this junction above!
+            if jid in all_e: continue
             
-            if jid in all_e: 
-                amb_phase = self._get_ambulance_phase(jid, all_e[jid].get("route", []))
-                if amb_phase is not None:
-                    best_p = amb_phase
-                    selected_by_agent = False
-                    if self.current_step % 20 == 0:
-                        print(f"🚦 [EVP ACTIVE] Dynamic Corridor overriding {jid} for {all_e[jid].get('vehicle_id')} (Phase {best_p})")
-                else:
-                    act = 0 if all_e[jid].get("direction", "NS") == "NS" else 1
+            p_map = self.junction_states[jid]["phases_map"]
+            possible_phases = p_map["NS"] if act == 0 else p_map["EW"]
+            best_p = possible_phases[0]
+            
+            # Sub-Phase Pressure Resolution
+            if len(possible_phases) > 1:
+                max_p = -1
+                link_info = p_map["link_info"]
+                dir_links = link_info["ns"] if act == 0 else link_info["ew"]
+                
+                logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(jid)
+                for pid in possible_phases:
+                    state = logics[0].phases[pid].state
+                    phase_pressure = 0
+                    seen_lanes = set()
+                    for idx in dir_links:
+                        if state[idx].lower() == 'g':
+                            lane_id = link_info["links"][idx][0][0]
+                            if lane_id not in seen_lanes:
+                                phase_pressure += self.get_lane_pcu_pressure(lane_id)
+                                seen_lanes.add(lane_id)
+                    if phase_pressure > max_p:
+                        max_p, best_p = phase_pressure, pid
 
-            if selected_by_agent:
-                possible_phases = p_map["NS"] if act == 0 else p_map["EW"]
-                best_p = possible_phases[0]
-                if len(possible_phases) > 1:
-                    max_p = -1
-                    link_info = p_map["link_info"]
-                    dir_links = link_info["ns"] if act == 0 else link_info["ew"]
-                    
-                    logics = traci.trafficlight.getCompleteRedYellowGreenDefinition(jid)
-                    for pid in possible_phases:
-                        state = logics[0].phases[pid].state
-                        phase_pressure = 0
-                        seen_lanes = set()
-                        for idx in dir_links:
-                            if state[idx].lower() == 'g':
-                                lane_id = link_info["links"][idx][0][0]
-                                if lane_id not in seen_lanes:
-                                    phase_pressure += self.get_lane_pcu_pressure(lane_id)
-                                    seen_lanes.add(lane_id)
-                        if phase_pressure > max_p:
-                            max_p, best_p = phase_pressure, pid
-
+            # Safety phase timeout exclusively applied to normal AI operations (20 seconds)
             if best_p != self.junction_states[jid]["phase"] and self.junction_states[jid]["time_in_phase"] >= 20:
                 traci.trafficlight.setPhase(jid, best_p)
-                self.junction_states[jid]["phase"], self.junction_states[jid]["time_in_phase"] = best_p, 0
-            else: self.junction_states[jid]["time_in_phase"] += self.frame_skip
+                self.junction_states[jid]["phase"] = best_p
+                self.junction_states[jid]["time_in_phase"] = 0
+            else: 
+                self.junction_states[jid]["time_in_phase"] += self.frame_skip
         
         for _ in range(self.frame_skip):
             traci.simulationStep()
@@ -571,21 +592,34 @@ class TrafficEnv:
             for vid in traci.vehicle.getIDList():
                 if traci.vehicle.getTypeID(vid) == "ambulance":
                     curr_edge = traci.vehicle.getRoadID(vid)
-                    target_jid = None
+                    full_route = list(traci.vehicle.getRoute(vid))
                     
-                    # If inside the intersection, keep it locked to clear
+                    # Truncate the route array geographically: only consider edges structurally AHEAD of the ambulance
+                    try:
+                        idx = full_route.index(curr_edge)
+                        active_route = full_route[idx:]
+                    except ValueError:
+                        active_route = full_route
+
+                    # 1. If currently inside an intersection, keep it strictly locked
                     if curr_edge.startswith(":"):
                         target_jid = curr_edge.split("_")[0][1:]
-                    else:
-                        target_jid = traci.edge.getToJunction(curr_edge)
-                    
-                    if target_jid and target_jid in self.junction_ids:
-                        route = traci.vehicle.getRoute(vid)
-                        all_e[target_jid] = {
-                            "direction": "NS", # Override logic inherently resolves phase via _get_ambulance_phase
-                            "vehicle_id": vid,
-                            "route": list(route)
-                        }
+                        if target_jid and target_jid in self.junction_ids:
+                            all_e[target_jid] = {
+                                "direction": "NS",
+                                "vehicle_id": vid,
+                                "route": active_route
+                            }
+                            
+                    # 2. Aggressively preempt the UPCOMING corridor simultaneously
+                    for ed in active_route:
+                        target_jid = traci.edge.getToJunction(ed)
+                        if target_jid and target_jid in self.junction_ids:
+                            all_e[target_jid] = {
+                                "direction": "NS",
+                                "vehicle_id": vid,
+                                "route": active_route
+                            }
         except:
             pass
             
@@ -636,7 +670,7 @@ class TrafficEnv:
             # Determine Color based on Operational State
             is_active = True
             if jid in all_e:
-                color = (255, 0, 0, 150) # Bright Red -> Emergency Preemption
+                color = (0, 255, 0, 150) # Bright Neon Green -> Emergency Preemption Green Wave
                 radius = 45
             elif global_watchdog.is_crashed(jid):
                 pulse = 255 if (self.current_step // 2) % 2 == 0 else 100

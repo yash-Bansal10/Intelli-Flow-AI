@@ -87,7 +87,7 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
       }
       // Emergency overrides all
       const isEvpActive = data.is_emergency === true
-      if (isEvpActive) color = '#ef4444' // Bright Red
+      if (isEvpActive) color = '#22c55e' // Neon Green Wave
       const radius = isEvpActive ? 16 : (isEmergencyActive ? 16 : 10)
 
       const malCount = getMalfunctionCount(jid)
@@ -184,11 +184,11 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
         } else {
           faultMarkersRef.current[jid].setLatLng([data.lat, data.lng])
           faultMarkersRef.current[jid].setIcon(faultIcon)
+          faultMarkersRef.current[jid].setOpacity(1)
         }
       } else {
         if (faultMarkersRef.current[jid]) {
-          faultMarkersRef.current[jid].remove()
-          delete faultMarkersRef.current[jid]
+          faultMarkersRef.current[jid].setOpacity(0)
         }
       }
 
@@ -212,11 +212,11 @@ export default function LiveOSMMap({ simulationData, onNodeClick, isEmergencyAct
         } else {
           evpMarkersRef.current[jid].setLatLng([data.lat, data.lng])
           evpMarkersRef.current[jid].setIcon(evpIcon)
+          evpMarkersRef.current[jid].setOpacity(1)
         }
       } else {
         if (evpMarkersRef.current[jid]) {
-          evpMarkersRef.current[jid].remove()
-          delete evpMarkersRef.current[jid]
+          evpMarkersRef.current[jid].setOpacity(0)
         }
       }
     })
