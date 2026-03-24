@@ -12,6 +12,8 @@ import { SidebarProvider } from '@/context/SidebarContext';
 import { HardwareHealthProvider } from '@/context/HardwareHealthContext';
 import { MainWrapper } from '@/components/MainWrapper';
 
+import { ClientShell } from '@/components/ClientShell';
+
 export const metadata: Metadata = {
   title: 'Intelli-Flow AI Dashboard',
   description: 'Live Traffic Management Command Center',
@@ -33,13 +35,9 @@ export default function RootLayout({
         >
           <HardwareHealthProvider>
             <SidebarProvider>
-              <Topbar />
-              <div className="flex min-h-screen bg-slate-50 pt-16">
-                <Sidebar />
-                <MainWrapper>
-                  <Suspense fallback={null}>{children}</Suspense>
-                </MainWrapper>
-              </div>
+              <ClientShell>
+                <Suspense fallback={null}>{children}</Suspense>
+              </ClientShell>
             </SidebarProvider>
           </HardwareHealthProvider>
           <Analytics />

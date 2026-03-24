@@ -17,7 +17,7 @@ interface JunctionDrawerProps {
 export function JunctionDrawer({ isOpen, onClose, junctionId }: JunctionDrawerProps) {
   const { data: simulationData } = useSimData()
   const { junctionNames, resolveJunctionName } = useHardwareHealth()
-  const [showArrows, setShowArrows] = useState(false)
+  const [showArrows, setShowArrows] = useState(true)
   const [elapsedLocal, setElapsedLocal] = useState(0)
   
   // Dynamically extract the specific junction data from the live stream
