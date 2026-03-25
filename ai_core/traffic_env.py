@@ -106,7 +106,7 @@ class TrafficEnv:
         # Day 9: Spatial Atlas & Geocoding
         self.map_name = map_name
         self.spatial_atlas = self._init_spatial_atlas()
-        self.ambulance_spawn_chance = 0.1 # Trigger constant ambient deployment per user request
+        self.ambulance_spawn_chance = 0.05 # Trigger constant ambient deployment per user request
 
     def _init_spatial_atlas(self):
         """Day 9: Initializes the real-world naming atlas with local caching."""
