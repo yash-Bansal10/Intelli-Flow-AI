@@ -4,8 +4,8 @@
 # =============================================================================
 
 # ── Network ──────────────────────────────────────────────────────────────────
-ESP32_CAM_URL   = "http://192.168.1.38/"   # ESP32-CAM MJPEG stream URL (Native camera daemon root)
-ESP32_CTRL_URL  = "http://192.168.1.43"    # ESP32 Controller base IP 
+ESP32_CAM_URL   = "http://192.168.1.37/"   # ESP32-CAM MJPEG stream URL (Native camera daemon root)
+ESP32_CTRL_URL  = "http://192.168.1.40"    # ESP32 Controller base IP 
 ESP32_CTRL_PORT = 80                                # ESP32 Controller port
 BACKEND_HOST    = "0.0.0.0"                         # Laptop backend listen host
 BACKEND_PORT    = 8000                              # Laptop backend port

@@ -38,6 +38,7 @@ import asyncio
 import base64
 import logging
 import time
+import threading
 import cv2
 import numpy as np
 from fastapi import FastAPI, HTTPException
@@ -130,9 +131,18 @@ _timers = {
 async def startup():
     logger.info("▶ Starting Intelli-Flow Hardware Backend …")
     camera.start()
-    await asyncio.sleep(1.5)
+    await asyncio.sleep(1.5)   # Let capture thread grab first frame
+
+    # ── Thread 2: YOLO + DQN Inference (independent of capture & API) ────────
+    inference_thread = threading.Thread(
+        target=_inference_loop, daemon=True, name="yolo-inference"
+    )
+    inference_thread.start()
+    logger.info("✓ Inference thread started.")
+
+    # ── FastAPI async tick (media annotation + JPEG encoding only) ────────────
     asyncio.create_task(tick_loop())
-    logger.info("✓ Tick loop started.")
+    logger.info("✓ Media tick loop started.")
 
 
 @app.on_event("shutdown")
@@ -140,143 +150,164 @@ async def shutdown():
     camera.stop()
     logger.info("■ Backend stopped.")
 
-# ── Main Tick Loop ─────────────────────────────────────────────────────────────
+# ── Thread 2: YOLO + DQN Inference Loop ──────────────────────────────────────
+# Runs entirely on a background daemon thread.
+# Reads the latest raw frame, runs YOLO, updates DQN, pushes results to _shared.
+# NEVER blocks the capture thread or the FastAPI media loop.
 
-async def tick_loop():
+def _inference_loop():
+    """
+    Dedicated inference thread.
+    Fires every 0.35 s (~3 Hz) to keep CPU headroom for the camera capture.
+    Frame-skipping is inherent: we always grab the NEWEST raw frame.
+    """
+    INFER_INTERVAL = 0.35   # seconds between inference passes
+
     while True:
-        tick_start = time.time()
+        t_start = time.time()
         try:
-            await run_tick()
+            _run_inference_tick()
         except Exception as e:
-            logger.error(f"[Tick] Unhandled error: {e}", exc_info=True)
-        elapsed = time.time() - tick_start
-        await asyncio.sleep(max(0.0, TICK_INTERVAL_S - elapsed))
+            logger.error(f"[Infer] Unhandled error: {e}", exc_info=True)
+
+        elapsed = time.time() - t_start
+        time.sleep(max(0.0, INFER_INTERVAL - elapsed))
 
 
-async def run_tick():
-    t0 = time.time()
-
-    # ── 1. Get Frame (Runs at 20 FPS natively inside CameraReader) ────────────
-    frame = camera.get_latest_frame()
+def _run_inference_tick():
+    """Single inference pass: YOLO → DQN → ESP32 dispatch → _shared update."""
+    # ── Grab latest raw frame (drop-based, never queue) ──────────────────────
+    frame = camera.get_latest_raw()
     if frame is None:
         return
 
     now = time.time()
-    
-    # ── 2. Decoupled AI Block (Fires 3x a second to prevent YOLO CPU stutter) ──
-    if now - _timers.get("last_ai_tick", 0) >= 0.35:
-        sim_time = _shared["model_output"]["simulation_time"] + 1
+    sim_time = _shared["model_output"]["simulation_time"] + 1
 
-        # Zone Crops
-        zones = crop_zones(frame)
+    # ── Zone crops (cheap slice, not a copy) ─────────────────────────────────
+    zones = crop_zones(frame)
 
-        # YOLOv11s Inference (CPU Expensive!)
-        zone_results = yolo.count_zones(zones) if yolo.is_ready() else _empty_zone_results()
+    # ── YOLO inference (CPU heavy — isolated here so it can't lag the stream) ─
+    if yolo.is_ready():
+        zone_results = yolo.count_zones(zones)
+    else:
+        zone_results = _empty_zone_results()
 
-        # Emergency Override Check (from YOLO or from Dashboard API manual override)
-        emergency_arm = yolo.find_emergency_arm(zone_results)
-        if not emergency_arm:
-            emergency_arm = state_b.get_active_emergency_arm()
-            
-        current_model_phase = _shared["current_phase"]
-        q_values_list = []
-        model_phase = current_model_phase
+    # ── Emergency detection ───────────────────────────────────────────────────
+    emergency_arm = yolo.find_emergency_arm(zone_results)
+    if not emergency_arm:
+        emergency_arm = state_b.get_active_emergency_arm()
 
-        if emergency_arm:
-            model_phase = arm_to_emergency_model_phase(emergency_arm)
-            _timers["emergency_clear_time"] = now + EMERGENCY_HOLD
-            logger.warning(f"[AI] 🚨 EMERGENCY ACTIVE — {emergency_arm.upper()} → {model_phase}")
-        elif now < _timers["emergency_clear_time"]:
-            logger.warning(f"[AI] 🚨 EMERGENCY CLEARING — Holding phase")
+    current_model_phase = _shared["current_phase"]
+    q_values_list = []
+    model_phase = current_model_phase
+
+    if emergency_arm:
+        model_phase = arm_to_emergency_model_phase(emergency_arm)
+        _timers["emergency_clear_time"] = now + EMERGENCY_HOLD
+        logger.warning(f"[AI] 🚨 EMERGENCY — {emergency_arm.upper()} → {model_phase}")
+    elif now < _timers["emergency_clear_time"]:
+        logger.warning("[AI] 🚨 EMERGENCY CLEARING — Holding phase")
+    else:
+        state_vec = state_b.build(zone_results, current_model_phase, emergency_arm=None)
+        if dqn.is_ready():
+            action_idx, q_values_arr = dqn.predict_action(state_vec)
+            q_values_list = q_values_arr.tolist()
+            proposed_phase = action_to_model_phase(action_idx)
         else:
-            state_vec = state_b.build(zone_results, current_model_phase, emergency_arm=None)
+            logger.warning("[AI] DQN not ready — defaulting to NS-Green")
+            proposed_phase = "NS-Green"
+            q_values_list = []
 
-            if dqn.is_ready():
-                action_idx, q_values_arr = dqn.predict_action(state_vec)
-                q_values_list = q_values_arr.tolist()
-                proposed_phase = action_to_model_phase(action_idx)
-            else:
-                logger.warning("[AI] DQN not ready — defaulting to NS-Green")
-                action_idx = 0
-                q_values_list = []
-                proposed_phase = "NS-Green"
-                
-            # Apply 20-Second Minimum Green Lock
-            if proposed_phase != current_model_phase:
-                if (now - _timers["last_phase_change"]) >= MIN_GREEN_TIME:
-                    model_phase = proposed_phase
+        # Min-green phase lock
+        if proposed_phase != current_model_phase:
+            if (now - _timers["last_phase_change"]) >= MIN_GREEN_TIME:
+                model_phase = proposed_phase
 
-        if model_phase != current_model_phase and current_model_phase != "Initializing...":
-            _timers["last_phase_change"] = now
+    if model_phase != current_model_phase and current_model_phase != "Initializing...":
+        _timers["last_phase_change"] = now
 
-        # Build queues list
-        arm_order = ["north", "south", "east", "west"]
-        queues_list = []
-        for arm in arm_order:
-            pcu = zone_results.get(arm, {}).get("pcu", 0.0)
-            per_lane = round(pcu / 3.0, 1)
-            queues_list.extend([per_lane, per_lane, per_lane])
+    # ── Build queues list ─────────────────────────────────────────────────────
+    arm_order = ["north", "south", "east", "west"]
+    queues_list = []
+    for arm in arm_order:
+        pcu = zone_results.get(arm, {}).get("pcu", 0.0)
+        per_lane = round(pcu / 3.0, 1)
+        queues_list.extend([per_lane, per_lane, per_lane])
 
-        score = compute_score_from_pcu(zone_results)
-        
-        model_output = build_model_output(
-            junction_id=JUNCTION_ID,
-            model_phase=model_phase,
-            queues_list=queues_list,
-            score=score,
-            simulation_time=sim_time,
-        )
+    score = compute_score_from_pcu(zone_results)
+    model_output = build_model_output(
+        junction_id=JUNCTION_ID,
+        model_phase=model_phase,
+        queues_list=queues_list,
+        score=score,
+        simulation_time=sim_time,
+    )
+    esp32_phase    = model_phase_to_esp32(model_phase)
+    queues_dict    = queues_list_to_dict(queues_list)
+    congestion_score = compute_congestion_score(zone_results)
 
-        esp32_phase = model_phase_to_esp32(model_phase)
-        queues_dict = queues_list_to_dict(queues_list)
-        congestion_score = compute_congestion_score(zone_results)
-
-        # Dispatch Hardware payload asynchronously
-        esp32_payload = {
+    # ── ESP32 dispatch (only on phase change or 2s heartbeat) ────────────────
+    if model_phase != current_model_phase or now - _timers.get("last_esp_post", 0) > 2.0:
+        send_phase({
             "simulation_time":  sim_time,
             "current_phase":    esp32_phase,
             "queues":           queues_dict,
             "congestion_score": congestion_score,
-        }
-        
-        # ── DO NOT FLOOD THE MICROPTHYON BOARD ─────────────────────────────────
-        # Only ping the ESP32 if the LEDs need to change, or as a 2.0s heartbeat
-        if model_phase != current_model_phase or now - _timers.get("last_esp_post", 0) > 2.0:
-            send_phase(esp32_payload)
-            _timers["last_esp_post"] = now
-
-        # Update Shared State (AI Data Cache)
-        _shared.update({
-            "model_output":      model_output,
-            "current_phase":     model_phase,
-            "esp32_phase":       esp32_phase,
-            "queues":            queues_dict,
-            "congestion_score":  congestion_score,
-            "q_values":          q_values_list,
-            "emergency_arm":     emergency_arm,
-            "neighbor_pressure": state_b.get_neighbor_pressures(),
-            "zone_results":      zone_results, # Cache the expensive boxes!
         })
-        _timers["last_ai_tick"] = now
+        _timers["last_esp_post"] = now
 
-        logger.info(
-            f"[AI {sim_time:04d}] Phase={model_phase} | "
-            f"N={queues_dict['north']} S={queues_dict['south']} "
-            f"E={queues_dict['east']} W={queues_dict['west']} | "
-            f"Score={score}"
-        )
+    # ── Annotate frame and push JPEG ──────────────────────────────────────────
+    annotated = draw_zone_overlay(frame, zone_results)
+    _, jpeg_bytes = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    camera.set_annotated_jpeg(jpeg_bytes.tobytes())
 
-    # ── 3. Media Streaming Pipeline (Runs EVERY tick, hyper-fast) ─────────────
-    # Pull the cached 1-second-old bounding boxes and paste them onto the live frame
-    zr = _shared.get("zone_results")
-    if zr is None:
-        zr = _empty_zone_results()
-        
+    # ── Update shared state ───────────────────────────────────────────────────
+    _shared.update({
+        "model_output":      model_output,
+        "current_phase":     model_phase,
+        "esp32_phase":       esp32_phase,
+        "queues":            queues_dict,
+        "congestion_score":  congestion_score,
+        "q_values":          q_values_list,
+        "emergency_arm":     emergency_arm,
+        "neighbor_pressure": state_b.get_neighbor_pressures(),
+        "zone_results":      zone_results,
+        "tick_ms":           round((time.time() - now) * 1000, 1),
+    })
+
+    logger.info(
+        f"[AI {sim_time:04d}] Phase={model_phase} | "
+        f"N={queues_dict['north']} S={queues_dict['south']} "
+        f"E={queues_dict['east']} W={queues_dict['west']} | "
+        f"Score={score}"
+    )
+
+
+# ── FastAPI Media Tick (annotation-only, runs at full speed) ──────────────────
+# This is now YOLO-free. It just stamps the cached detection boxes onto the
+# latest raw frame for smooth video playback in the browser.
+
+async def tick_loop():
+    while True:
+        try:
+            await run_tick()
+        except Exception as e:
+            logger.error(f"[Tick] Unhandled error: {e}", exc_info=True)
+        await asyncio.sleep(TICK_INTERVAL_S)
+
+
+async def run_tick():
+    """Media-only tick: annotate latest raw frame with cached boxes → JPEG."""
+    frame = camera.get_latest_raw()
+    if frame is None:
+        return
+
+    # Use cached zone_results from last inference pass (never blocks on YOLO)
+    zr = _shared.get("zone_results") or _empty_zone_results()
     annotated = draw_zone_overlay(frame, zr)
-    _, jpeg_bytes = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 95]) # Max quality for crisp dashboard viewing
-
-    _shared["annotated_frame"] = jpeg_bytes.tobytes()
-    _shared["tick_ms"] = round((time.time() - t0) * 1000, 1)
+    _, jpeg_bytes = cv2.imencode(".jpg", annotated, [cv2.IMWRITE_JPEG_QUALITY, 85])
+    camera.set_annotated_jpeg(jpeg_bytes.tobytes())
 
 
 def _empty_zone_results():
@@ -317,10 +348,11 @@ def api_yolo_feed():
     """Return latest annotated camera frame as base64 JPEG."""
     if not camera.is_alive():
         raise HTTPException(status_code=503, detail="ESP32-CAM Connection Lost (>5.0s)")
-        
-    if _shared["annotated_frame"] is None:
+
+    jpeg = camera.get_annotated_jpeg()
+    if jpeg is None:
         raise HTTPException(status_code=503, detail="No frame available yet")
-    b64 = base64.b64encode(_shared["annotated_frame"]).decode()
+    b64 = base64.b64encode(jpeg).decode()
     return {"image_b64": b64, "content_type": "image/jpeg"}
 
 

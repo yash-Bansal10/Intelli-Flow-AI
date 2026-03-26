@@ -138,7 +138,7 @@ void setup() {
   config.pixel_format = PIXFORMAT_JPEG;
   
   // Frame parameters
-  config.frame_size = FRAMESIZE_VGA; // 320x240 (4x smaller than VGA, identical YOLO accuracy)
+  config.frame_size = FRAMESIZE_QVGA; // 320x240 (4x smaller than VGA, identical YOLO accuracy)
   config.jpeg_quality = 12; // 10 is too heavy for the 10MHz clock, 12 is the sweet spot
   config.fb_count = 1;
 

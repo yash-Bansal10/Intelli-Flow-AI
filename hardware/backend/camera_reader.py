@@ -1,6 +1,16 @@
 """
 camera_reader.py — Intelli-Flow AI Hardware Backend
-Reads the MJPEG stream from the ESP32-CAM and returns decoded frames.
+
+Decoupled 2-Thread Architecture:
+  Thread 1 (Capture)  → Continuously reads raw MJPEG frames from ESP32-CAM.
+                         Always overwrites `_latest_raw` with the newest frame.
+                         NEVER blocks waiting for inference.
+
+  Thread 2 (Inference) → Reads `_latest_raw`, runs YOLO + annotation on it.
+                          Always operates on frame N while capture grabs frame N+k.
+                          Old frames are DROPPED, never queued.
+
+This eliminates the core lag source: YOLO no longer blocks frame capture.
 """
 
 import cv2
@@ -16,93 +26,121 @@ logger = logging.getLogger(__name__)
 
 class CameraReader:
     """
-    Continuously reads frames from the ESP32-CAM MJPEG stream in a background
-    thread. The latest frame is always available via get_latest_frame().
-
-    This prevents the main tick loop from blocking if the camera is slow.
+    Thread 1: Continuously reads raw frames from the ESP32-CAM MJPEG stream.
+    Always overwrites the latest_raw slot — never queues.
+    Inference thread reads from this slot independently at its own pace.
     """
 
     def __init__(self, url: str = ESP32_CAM_URL):
         self.url = url
-        self._frame = None
-        self._lock = threading.Lock()
-        self._running = False
-        self._cap = None
-        self._thread = None
-        self._last_frame_time = 0.0
 
-    # ── Public API ─────────────────────────────────────────────────────────────
+        # ── Raw frame slot (written by Thread 1, read by Thread 2) ───────────
+        self._latest_raw: np.ndarray | None = None
+        self._raw_lock = threading.Lock()
+
+        # ── Annotated frame slot (written by Thread 2, read by API) ──────────
+        self._annotated_jpeg: bytes | None = None
+        self._annotated_lock = threading.Lock()
+
+        # ── Health tracking ───────────────────────────────────────────────────
+        self._last_frame_time = 0.0          # updated by capture thread
+        self._last_inference_time = 0.0      # updated by inference thread
+        self._frame_count = 0                # monotonic frame counter
+
+        self._running = False
+        self._capture_thread: threading.Thread | None = None
+
+    # ── Public API ────────────────────────────────────────────────────────────
 
     def start(self):
-        """Open the MJPEG stream and start the background reader thread."""
-        logger.info(f"[Camera] Connecting to {self.url}")
+        """Start the background capture thread."""
+        logger.info(f"[Camera] Starting capture thread → {self.url}")
         self._running = True
-        self._thread = threading.Thread(target=self._read_loop, daemon=True)
-        self._thread.start()
+        self._capture_thread = threading.Thread(
+            target=self._capture_loop, daemon=True, name="cam-capture"
+        )
+        self._capture_thread.start()
 
     def stop(self):
-        """Stop the reader thread and release the stream."""
+        """Gracefully stop the capture thread."""
         self._running = False
-        if self._cap:
-            self._cap.release()
-        logger.info("[Camera] Stopped.")
+        logger.info("[Camera] Capture thread stopped.")
 
-    def get_latest_frame(self):
-        """
-        Return the most recently decoded frame as a numpy array (BGR, HxWx3).
-        Returns None if no frame has been received yet.
-        """
-        with self._lock:
-            return self._frame.copy() if self._frame is not None else None
+    def get_latest_raw(self) -> np.ndarray | None:
+        """Return the most recent raw (unannotated) frame. Non-blocking."""
+        with self._raw_lock:
+            return self._latest_raw.copy() if self._latest_raw is not None else None
+
+    def set_annotated_jpeg(self, jpeg_bytes: bytes):
+        """Called by the inference thread to publish its annotated output."""
+        with self._annotated_lock:
+            self._annotated_jpeg = jpeg_bytes
+        self._last_inference_time = time.time()
+
+    def get_annotated_jpeg(self) -> bytes | None:
+        """Called by the /api/yolo_feed endpoint. Returns last annotated JPEG."""
+        with self._annotated_lock:
+            return self._annotated_jpeg
 
     def is_alive(self) -> bool:
-        """True if a frame was received within the last CAM_READ_TIMEOUT seconds."""
+        """True if a raw frame was received within CAM_READ_TIMEOUT seconds."""
         return (time.time() - self._last_frame_time) < CAM_READ_TIMEOUT
+
+    def get_frame_count(self) -> int:
+        return self._frame_count
 
     def get_status(self) -> dict:
         return {
-            "connected": self._cap is not None and self._cap.isOpened(),
             "alive": self.is_alive(),
             "last_frame_age_s": round(time.time() - self._last_frame_time, 2),
+            "total_frames": self._frame_count,
         }
 
-    # ── Internal ───────────────────────────────────────────────────────────────
+    # ── Thread 1: Capture Loop ────────────────────────────────────────────────
 
-    def _read_loop(self):
+    def _capture_loop(self):
+        """
+        Continuously pull JPEG frames from the ESP32-CAM's MJPEG HTTP stream.
+        Decodes each frame and atomically overwrites the shared raw slot.
+        Retries with a 2-second backoff on any connection failure.
+        """
         while self._running:
             try:
-                # Open the stream using native python urllib with a strict timeout
                 stream = urllib.request.urlopen(self.url, timeout=CAM_READ_TIMEOUT)
-                bytes_buffer = b''
-                logger.info("[Camera] Stream opened successfully (Native HTTP).")
-                
+                buf = b""
+                logger.info("[Camera] MJPEG stream opened.")
+
                 while self._running:
                     chunk = stream.read(4096)
                     if not chunk:
-                        logger.warning("[Camera] Stream ended prematurely. Reconnecting…")
+                        logger.warning("[Camera] Stream ended — reconnecting…")
                         break
-                        
-                    bytes_buffer += chunk
-                    
-                    # Search for standard JPEG header/footer bytes in the buffer
-                    a = bytes_buffer.find(b'\xff\xd8')
-                    b = bytes_buffer.find(b'\xff\xd9')
-                    
+
+                    buf += chunk
+
+                    # Locate JPEG markers
+                    a = buf.find(b"\xff\xd8")
+                    b = buf.find(b"\xff\xd9")
+
                     if a != -1 and b != -1:
-                        # Extract the exact JPEG bytecode
-                        jpg = bytes_buffer[a:b+2]
-                        # Flush the buffer memory
-                        bytes_buffer = bytes_buffer[b+2:]
-                        
-                        # Decode the physical bytes instantly via OpenCV CPU
-                        frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-                        
+                        jpg_bytes = buf[a : b + 2]
+                        buf = buf[b + 2:]   # flush consumed bytes immediately
+
+                        frame = cv2.imdecode(
+                            np.frombuffer(jpg_bytes, dtype=np.uint8),
+                            cv2.IMREAD_COLOR,
+                        )
+
                         if frame is not None:
                             frame = cv2.resize(frame, (FRAME_W, FRAME_H))
-                            with self._lock:
-                                self._frame = frame
+
+                            # ── Atomic overwrite — drop previous raw frame ──
+                            with self._raw_lock:
+                                self._latest_raw = frame
+
                             self._last_frame_time = time.time()
-                            
-            except Exception as e:
-                logger.error(f"[Camera] Physical Disconnect: {e}. Retrying strictly in 2s…")
+                            self._frame_count += 1
+
+            except Exception as exc:
+                logger.error(f"[Camera] Capture error: {exc}. Retrying in 2s…")
                 time.sleep(2)

@@ -68,7 +68,8 @@ export default function CameraFeed() {
   const qVals = status?.q_values?.length > 0 ? status.q_values.map((v: number) => Math.round(v * 100) / 100).join(', ') : "N/A"
   
   const rawQueues = status?.queues || { north: 0, south: 0, east: 0, west: 0 }
-  const totalCongestion = status?.congestion_score || 0
+  // score lives inside the junction model output as a live PCU integer
+  const totalCongestion = status?.junctions?.[Object.keys(status.junctions || {})[0]]?.score ?? status?.total_congestion ?? 0
   const evpArm = status?.emergency_arm
 
   // Approximation logic to create a dynamic 'waiting time' strictly for frontend demonstration mirroring PCU load
