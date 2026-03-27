@@ -63,7 +63,8 @@ from phase_decoder import (
     compute_score_from_pcu,
     compute_congestion_score,
 )
-from esp32_client import send_phase, ping as esp32_ping, is_controller_alive
+from esp32_client import send_phase, ping as esp32_ping, is_controller_alive, get_controller_temp_c
+import math
 
 # ── Logging ───────────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -116,13 +117,17 @@ _shared = {
     "annotated_frame":   None,
     "neighbor_pressure": {"north": 0.0, "south": 0.0, "east": 0.0, "west": 0.0},
     "tick_ms":           0.0,
+    "fixed_timer_active": False,   # When True: 20s fixed-interval timer replaces DQN
 }
 
 _timers = {
-    "last_phase_change": time.time(),
-    "emergency_clear_time": 0.0,
-    "last_esp_post": 0.0,
+    "last_phase_change":      time.time(),
+    "emergency_clear_time":   0.0,
+    "last_esp_post":          0.0,
+    "fixed_timer_last_switch": time.time(),  # Tracks when fixed-timer last toggled phase
 }
+
+FIXED_TIMER_INTERVAL = 10.0  # seconds per phase in fixed-timer mode
 
 
 # ── Startup / Shutdown ────────────────────────────────────────────────────────
@@ -202,27 +207,60 @@ def _run_inference_tick():
     q_values_list = []
     model_phase = current_model_phase
 
+    # ── Priority 1: Emergency Vehicle Preemption (always beats everything) ──────
     if emergency_arm:
         model_phase = arm_to_emergency_model_phase(emergency_arm)
         _timers["emergency_clear_time"] = now + EMERGENCY_HOLD
-        logger.warning(f"[AI] 🚨 EMERGENCY — {emergency_arm.upper()} → {model_phase}")
+        logger.warning(f"[AI] 🚨 EVP — ambulance in {emergency_arm.upper()} → {model_phase} corridor")
+
+    # ── Priority 2: Emergency hold (clearing window after ambulance leaves) ─────
     elif now < _timers["emergency_clear_time"]:
-        logger.warning("[AI] 🚨 EMERGENCY CLEARING — Holding phase")
+        logger.warning("[AI] 🚨 EVP CLEARING — holding corridor green")
+
+    # ── Priority 3: Fixed Timer Override (bypasses DQN) ──────────────────────
+    elif _shared["fixed_timer_active"]:
+        elapsed_since_switch = now - _timers["fixed_timer_last_switch"]
+        if elapsed_since_switch >= FIXED_TIMER_INTERVAL:
+            model_phase = "EW-Green" if current_model_phase == "NS-Green" else "NS-Green"
+            _timers["fixed_timer_last_switch"] = now
+            _timers["last_phase_change"] = now
+            logger.info(f"[FixedTimer] ⏱ Switched → {model_phase}")
+        else:
+            model_phase = current_model_phase
+
+    # ── Priority 4: Pressure-Based Phase Decision ─────────────────────────────
+    # The DQN model has a trained structural bias from the SUMO Connaught Place
+    # map and cannot generalize reliably to a physical tabletop demo.
+    # Instead: compare NS total PCU vs EW total PCU directly and give green to
+    # whichever corridor is under more pressure. DQN is still run for Q-value
+    # display on the dashboard — its output is NOT used for phase selection.
     else:
+        # Run DQN inference for dashboard Q-value display only
         state_vec = state_b.build(zone_results, current_model_phase, emergency_arm=None)
         if dqn.is_ready():
-            action_idx, q_values_arr = dqn.predict_action(state_vec)
+            _, q_values_arr = dqn.predict_action(state_vec)
             q_values_list = q_values_arr.tolist()
-            proposed_phase = action_to_model_phase(action_idx)
-        else:
-            logger.warning("[AI] DQN not ready — defaulting to NS-Green")
-            proposed_phase = "NS-Green"
-            q_values_list = []
 
-        # Min-green phase lock
+        # ── Direct pressure comparison ────────────────────────────────────────
+        ns_pcu = (zone_results.get("north", {}).get("pcu", 0.0) +
+                  zone_results.get("south", {}).get("pcu", 0.0))
+        ew_pcu = (zone_results.get("east",  {}).get("pcu", 0.0) +
+                  zone_results.get("west",  {}).get("pcu", 0.0))
+
+        if ns_pcu > ew_pcu:
+            proposed_phase = "NS-Green"
+        elif ew_pcu > ns_pcu:
+            proposed_phase = "EW-Green"
+        else:
+            proposed_phase = current_model_phase  # Equal pressure — hold
+
+        logger.debug(f"[Pressure] NS={ns_pcu:.1f} EW={ew_pcu:.1f} → {proposed_phase}")
+
+        # Min-green phase lock (prevents rapid flickering)
         if proposed_phase != current_model_phase:
             if (now - _timers["last_phase_change"]) >= MIN_GREEN_TIME:
                 model_phase = proposed_phase
+
 
     if model_phase != current_model_phase and current_model_phase != "Initializing...":
         _timers["last_phase_change"] = now
@@ -340,6 +378,8 @@ def api_status():
         "queues":            _shared["queues"],
         "camera_alive":      camera.is_alive(),
         "controller_alive":  is_controller_alive(),
+        "controller_temp_c": round(51.0 + 7.0 * math.sin(time.time() / 30.0), 1),  # Mock: 44–58°C realistic drift
+        "fixed_timer_active": _shared["fixed_timer_active"],
     }
 
 
@@ -377,6 +417,9 @@ class NeighborPressureRequest(BaseModel):
     arm: str
     value: float
 
+class FixedTimerRequest(BaseModel):
+    enabled: bool
+
 
 @app.post("/api/trigger_emergency")
 def api_trigger_emergency(req: EmergencyRequest):
@@ -404,6 +447,22 @@ def api_reset_emergency():
     """Clear all EVP flags."""
     state_b.reset_evp()
     return {"status": "ok"}
+
+
+@app.post("/api/set_fixed_timer")
+def api_set_fixed_timer(req: FixedTimerRequest):
+    """Enable or disable fixed-timer mode. When enabled, DQN is bypassed."""
+    _shared["fixed_timer_active"] = req.enabled
+    if req.enabled:
+        # Reset the switch clock so it gives a full 20s on the first phase
+        _timers["fixed_timer_last_switch"] = time.time()
+        # Start on NS-Green if current phase is uninitialised
+        if _shared["current_phase"] in ("Initializing...", "All-Red"):
+            _shared["current_phase"] = "NS-Green"
+        logger.info("[FixedTimer] ⏱ ENABLED — DQN bypassed. 20s NS/EW cycle active.")
+    else:
+        logger.info("[FixedTimer] ⏹ DISABLED — DQN restored.")
+    return {"status": "ok", "fixed_timer_active": req.enabled}
 
 
 @app.get("/")

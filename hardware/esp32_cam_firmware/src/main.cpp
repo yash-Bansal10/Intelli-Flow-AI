@@ -5,8 +5,8 @@
 // ===========================
 // Enter your WiFi credentials
 // ===========================
-const char* ssid = "First floor";
-const char* password = "Moh@3301";
+const char* ssid = "Vishal Singh";
+const char* password = "8755655652";
 
 // AI-Thinker ESP32-CAM PIN Map
 #define PWDN_GPIO_NUM     32

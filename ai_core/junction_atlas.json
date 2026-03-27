@@ -1,120 +1,120 @@
 {
   "1869716862": {
-    "name": "Junction 1869716862",
+    "name": "Outer Circle, Connaught Place, Kashmiri Market",
     "region": "Connaught Place, Delhi",
     "lat": 28.63125201353441,
     "lon": 77.2224344070843
   },
   "249783302": {
-    "name": "Junction 249783302",
+    "name": "Radial Road 2, Connaught Place",
     "region": "Connaught Place, Delhi",
     "lat": 28.631429106561466,
     "lon": 77.21674218270871
   },
   "249783316": {
-    "name": "Junction 249783316",
+    "name": "Radial Road 4, Connaught Place, Kashmiri Market",
     "region": "Connaught Place, Delhi",
     "lat": 28.635719062202874,
     "lon": 77.21988333187646
   },
   "432874005": {
-    "name": "Junction 432874005",
+    "name": "Outer Circle, Connaught Place, Kashmiri Market",
     "region": "Connaught Place, Delhi",
     "lat": 28.635257091801282,
     "lon": 77.21800552960775
   },
   "432874009": {
-    "name": "Junction 432874009",
+    "name": "Chelmsford Road, Connaught Place",
     "region": "Connaught Place, Delhi",
     "lat": 28.641875153871418,
     "lon": 77.21845478949207
   },
   "5792664575": {
-    "name": "Junction 5792664575",
+    "name": "Tolstoy Marg, Connaught Place",
     "region": "Connaught Place, Delhi",
     "lat": 28.62881891326078,
     "lon": 77.22624922336813
   },
   "6234228016": {
-    "name": "Junction 6234228016",
+    "name": "Maharaja Ranjeet Singh Marg, Connaught Place",
     "region": "Connaught Place, Delhi",
     "lat": 28.62910230927287,
     "lon": 77.22659012194076
   },
   "6234228017": {
-    "name": "Junction 6234228017",
+    "name": "Tolstoy Marg, Connaught Place",
     "region": "Connaught Place, Delhi",
     "lat": 28.628779154194124,
     "lon": 77.2263626129255
   },
   "8490153083": {
-    "name": "Junction 8490153083",
+    "name": "New Delhi Railway Station Flyover, Kotwali Tehsil, Arya Nagar",
     "region": "Connaught Place, Delhi",
     "lat": 28.645959735561874,
     "lon": 77.2199702524548
   },
   "9522075690": {
-    "name": "Junction 9522075690",
+    "name": "Foot Over Bridge 1, Kotwali Tehsil, New Delhi Railway Station",
     "region": "Connaught Place, Delhi",
     "lat": 28.643608964959405,
     "lon": 77.22279087549357
   },
   "9522075691": {
-    "name": "Junction 9522075691",
+    "name": "Barron Road, Kotwali Tehsil",
     "region": "Connaught Place, Delhi",
     "lat": 28.64348721888185,
     "lon": 77.22278165961467
   },
   "9707091860": {
-    "name": "Junction 9707091860",
+    "name": "Link Road, Chanakya Puri Tehsil, Jhandewalan",
     "region": "Connaught Place, Delhi",
     "lat": 28.644102816360466,
     "lon": 77.2001410687539
   },
   "9707091861": {
-    "name": "Junction 9707091861",
+    "name": "Link Road, Chanakya Puri Tehsil, Jhandewalan",
     "region": "Connaught Place, Delhi",
     "lat": 28.64425742418544,
     "lon": 77.20022704101822
   },
   "GS_249783308": {
-    "name": "Junction GS_249783308",
+    "name": "Radial Road 3, Connaught Place, Kashmiri Market",
     "region": "Connaught Place, Delhi",
     "lat": 28.634262237605892,
     "lon": 77.21714046585447
   },
   "GS_309642109": {
-    "name": "Junction GS_309642109",
+    "name": "Dayal chowk, Chanakya Puri Tehsil, Jhandewalan",
     "region": "Connaught Place, Delhi",
     "lat": 28.64514555282698,
     "lon": 77.19774256380393
   },
   "GS_915473666": {
-    "name": "Junction GS_915473666",
+    "name": "Karol Bagh Tehsil, Multani Dhanda",
     "region": "Connaught Place, Delhi",
     "lat": 28.643222150516525,
     "lon": 77.20360068059271
   },
   "GS_915473757": {
-    "name": "Junction GS_915473757",
+    "name": "Paharganj",
     "region": "Connaught Place, Delhi",
     "lat": 28.643125643054503,
     "lon": 77.20305494847399
   },
   "GS_cluster_11301690339_11301690340_3661513065_3661513066": {
-    "name": "Junction GS_cluster_11301690339_11301690340_3661513065_3661513066",
+    "name": "Bangla Sahib Road, Connaught Place",
     "region": "Connaught Place, Delhi",
     "lat": 28.627884077644232,
     "lon": 77.20878078058932
   },
   "GS_cluster_13440034865_13440034866_1869716959_450631313": {
-    "name": "Junction GS_cluster_13440034865_13440034866_1869716959_450631313",
+    "name": "Ramdwara Road, Paharganj, Aram Bagh",
     "region": "Connaught Place, Delhi",
     "lat": 28.637678180279178,
     "lon": 77.21165989989714
   },
   "GS_cluster_1668978741_458640643": {
-    "name": "Junction GS_cluster_1668978741_458640643",
+    "name": "Deen Dayal Upadhyay Road, Kotwali Tehsil, Rouse Avenue",
     "region": "Connaught Place, Delhi",
     "lat": 28.635202764235267,
     "lon": 77.22739720739307

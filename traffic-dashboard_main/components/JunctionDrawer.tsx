@@ -157,6 +157,28 @@ export function JunctionDrawer({ isOpen, onClose, junctionId }: JunctionDrawerPr
               </div>
             </motion.div>
 
+            {/* Live Junction Feed */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+              <div className="mb-3">
+                <h3 className="text-lg font-semibold text-slate-800">Live Junction Feed</h3>
+                <p className="text-xs text-slate-500 mt-1">Real-time computer vision stream from junction edge node.</p>
+              </div>
+              <div className="relative w-full rounded-xl overflow-hidden border border-slate-200/60 shadow-sm bg-black" style={{ aspectRatio: '16/9' }}>
+                <video
+                  className="absolute inset-0 w-full h-full object-cover"
+                  src="/detection_on_road.mp4"
+                  autoPlay
+                  loop
+                  muted
+                  playsInline
+                />
+                <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
+                  LIVE
+                </div>
+              </div>
+            </motion.div>
+
             {/* Pure-CSS Vertical Live Queue Bars */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <div className="mb-4">

@@ -62,15 +62,30 @@ def model_phase_to_esp32(model_phase: str) -> str:
 
 def arm_to_emergency_model_phase(arm: str) -> str:
     """
-    Convert an arm name to the model-format emergency phase string.
+    Convert an arm name to the CORRIDOR model-format phase for EVP.
+
+    Ambulance in North or South → give the entire NS corridor green
+    Ambulance in East  or West  → give the entire EW corridor green
+
+    This ensures the emergency vehicle AND oncoming traffic in its
+    corridor both get a clear path. Routes through NS_GREEN/EW_GREEN
+    on the ESP32 so the yellow transition (Red→Yellow→Green) is
+    applied automatically by the firmware.
 
     Args:
         arm: "north" | "south" | "east" | "west"
 
     Returns:
-        "Emergency-N" | "Emergency-S" | "Emergency-E" | "Emergency-W"
+        "NS-Green" | "EW-Green"
     """
-    return f"Emergency-{arm[0].upper()}"
+    arm = arm.lower()
+    if arm in ("north", "south"):
+        return "NS-Green"
+    elif arm in ("east", "west"):
+        return "EW-Green"
+    else:
+        logger.warning(f"[Decoder] Unknown arm '{arm}' for EVP — defaulting to NS-Green")
+        return "NS-Green"
 
 
 def queues_list_to_dict(queues_list: list) -> dict:

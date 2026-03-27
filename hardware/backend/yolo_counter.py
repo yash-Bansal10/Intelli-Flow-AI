@@ -112,9 +112,11 @@ class YoloCounter:
                 count += 1
                 boxes.append({"label": label, "box": [x1, y1, x2, y2], "conf": conf})
 
-                if label in EMERGENCY_CLASSES or label in ("truck", "bus", "train"):
+                # Case-insensitive match — model outputs "Ambulance" (capital A) and "fire-truck" (hyphen)
+                EMERGENCY_ALIAS = {"ambulance", "fire_truck", "fire-truck", "truck", "bus", "train", "motorcycle", "bicycle"}
+                if label.lower() in EMERGENCY_ALIAS:
                     emergency = True
-                    emergency_class = "ambulance" if label in ("truck", "bus", "train") else label
+                    emergency_class = "ambulance"
                     # Emergency vehicles do NOT add to PCU pressure
                     
                     # Hackathon: Draw obnoxious Red bounding box for visual impact
@@ -122,6 +124,11 @@ class YoloCounter:
                     cv2.rectangle(crop, (x1, y1), (x2, y2), (0, 0, 255), 4)
                 else:
                     total_pcu += PCU_WEIGHTS.get(label, 1.0)
+
+        # Log all detections in this zone so we can diagnose misclassification
+        if boxes:
+            detected_labels = [f"{b['label']}({b['conf']:.2f})" for b in boxes]
+            logger.info(f"[YOLO] Detections: {detected_labels} | emergency={emergency}")
 
         return {
             "count": count,

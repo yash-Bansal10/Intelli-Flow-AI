@@ -14,7 +14,7 @@ from config import ESP32_CTRL_URL, ESP32_POST_TIMEOUT
 logger = logging.getLogger(__name__)
 
 _ENDPOINT = f"{ESP32_CTRL_URL}/set_phase"
-_status = {"last_seen": time.time()}
+_status = {"last_seen": time.time(), "cpu_temp_c": None}
 
 def _async_post(payload: dict):
     """Background executing task to push HTTP packet without locking the Global python thread."""
@@ -61,17 +61,25 @@ def send_phase(payload: dict) -> bool:
 
 def ping() -> bool:
     """
-    Send a lightweight GET request to check if the ESP32 is reachable.
-    Returns True if reachable.
+    Lightweight GET /ping — checks reachability and pulls CPU temperature.
+    Returns True if the board responds with HTTP 200.
     """
     try:
         resp = requests.get(f"{ESP32_CTRL_URL}/ping", timeout=ESP32_POST_TIMEOUT)
         if resp.status_code == 200:
             _status["last_seen"] = time.time()
+            data = resp.json()
+            # Capture temperature if the firmware supports it
+            if "cpu_temp_c" in data:
+                _status["cpu_temp_c"] = data["cpu_temp_c"]
             return True
         return False
     except Exception:
         return False
+
+def get_controller_temp_c() -> float | None:
+    """Return the last known ESP32 CPU temperature, or None if not yet received."""
+    return _status.get("cpu_temp_c")
 
 def is_controller_alive() -> bool:
     """Returns True if the ESP32 Controller successfully responded within the last 7.0 seconds (3 dropped heartbeats tolerance)."""

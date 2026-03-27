@@ -60,7 +60,7 @@ class StateBuilder:
         # HACKATHON DEMO MULTIPLIER: Toy cars only register 1.0 PCU. The AI was trained on 
         # massive 30-car traffic jams. We must mathematically "flood" the lane tensors 
         # with massive pressure so the DQN doesn't ignore the table-top scale models!
-        arm_order = ["north", "east", "south", "west"]
+        arm_order = ["north", "south", "east", "west"]  # Must match index layout: N(0-2), S(3-5), E(6-8), W(9-11)
         for i, arm in enumerate(arm_order):
             # Hackathon: The AI naturally prefers EW-Green because of structural bias
             # in the SUMO training map. We artificially multiply NS queues by an extra 1.5x!

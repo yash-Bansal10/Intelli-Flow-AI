@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Camera, Radio, Server, Activity, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Siren, RefreshCw } from "lucide-react"
+import { Camera, Radio, Server, Activity, ArrowRight, ArrowLeft, ArrowUp, ArrowDown, Siren, Timer } from "lucide-react"
 
 const HW_API = "http://localhost:8000"
 
@@ -9,6 +9,7 @@ export default function CameraFeed() {
   const [frameB64, setFrameB64] = useState<string | null>(null)
   const [status, setStatus] = useState<any>(null)
   const [isLive, setIsLive] = useState(false)
+  const [fixedTimer, setFixedTimer] = useState(false)
   
   // Polling mechanism
   useEffect(() => {
@@ -59,6 +60,18 @@ export default function CameraFeed() {
   const resetEmergency = async () => {
     try {
       await fetch(`${HW_API}/api/reset_emergency`, { method: "POST" })
+    } catch (e) { console.error(e) }
+  }
+
+  const toggleFixedTimer = async () => {
+    const next = !fixedTimer
+    setFixedTimer(next)
+    try {
+      await fetch(`${HW_API}/api/set_fixed_timer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: next })
+      })
     } catch (e) { console.error(e) }
   }
 
@@ -150,19 +163,93 @@ export default function CameraFeed() {
         {/* Right Side: Per-Lane PCU Pressure Panels & Hardware Controls */}
         <div className="xl:col-span-1 space-y-4 flex flex-col h-150 overflow-y-auto pr-2 custom-scrollbar">
           
-          <div className="bg-slate-900 rounded-xl p-4 border border-slate-700 shadow-xl">
-            <h2 className="text-sm font-bold text-white flex items-center gap-2 mb-3 uppercase tracking-wider">
-              <Siren className="w-4 h-4 text-rose-500 animate-pulse" />
-              Fault Injector
-            </h2>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <button onClick={() => triggerEmergency("north")} className="bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 py-2 rounded-lg border border-slate-600 transition-colors">Test North</button>
-              <button onClick={() => triggerEmergency("south")} className="bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 py-2 rounded-lg border border-slate-600 transition-colors">Test South</button>
-              <button onClick={() => triggerEmergency("east")} className="bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 py-2 rounded-lg border border-slate-600 transition-colors">Test East</button>
-              <button onClick={() => triggerEmergency("west")} className="bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 py-2 rounded-lg border border-slate-600 transition-colors">Test West</button>
+
+          {/* ESP32 Controller Temperature Card */}
+          {(() => {
+            const temp = status?.controller_temp_c as number | undefined
+            const hasTemp = temp != null
+            const isHot  = hasTemp && temp >= 85
+            const isWarm = hasTemp && temp >= 70
+            const pct    = hasTemp ? Math.min(((temp - 20) / 80) * 100, 100) : 0
+            return (
+              <div className={`rounded-xl p-4 border shadow-sm ${
+                isHot  ? 'bg-rose-50 border-rose-200' :
+                isWarm ? 'bg-amber-50 border-amber-200' :
+                         'bg-white border-slate-200'
+              }`}>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-slate-500">ESP32 CPU Temp</span>
+                  <span className={`text-lg font-black ${
+                    isHot ? 'text-rose-600' : isWarm ? 'text-amber-600' : hasTemp ? 'text-slate-700' : 'text-slate-400'
+                  }`}>{hasTemp ? `${temp}°C` : '—'}</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${
+                    isHot ? 'bg-rose-500' : isWarm ? 'bg-amber-400' : hasTemp ? 'bg-emerald-400' : 'bg-slate-300'
+                  }`} style={{ width: `${pct}%` }} />
+                </div>
+                <div className={`text-[10px] mt-1.5 font-semibold ${
+                  isHot ? 'text-rose-500' : isWarm ? 'text-amber-500' : hasTemp ? 'text-emerald-600' : 'text-slate-400'
+                }`}>
+                  {isHot ? '🔴 THERMAL WARNING' : isWarm ? '🟡 Running Warm' : hasTemp ? '🟢 Normal' : 'Awaiting firmware…'}
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Fixed Timer Override Card */}
+          <div className={`rounded-xl p-4 border shadow-sm transition-all ${
+            fixedTimer
+              ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-300'
+              : 'bg-white border-slate-200'
+          }`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Timer className={`w-4 h-4 ${fixedTimer ? 'text-amber-600' : 'text-slate-400'}`} />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Signal Control Mode</span>
             </div>
-            <button onClick={resetEmergency} className="w-full bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex justify-center items-center gap-2 shadow-lg shadow-rose-900/40 mt-3">
-              <RefreshCw className="w-3 h-3" /> Clear EVP Locks
+            <div className={`text-sm font-bold mb-1 ${fixedTimer ? 'text-amber-700' : 'text-indigo-700'}`}>
+              {fixedTimer ? '⏱ Fixed Timer Active' : '🤖 DQN AI Active'}
+            </div>
+            <div className="text-[10px] text-slate-400 mb-3">
+              {fixedTimer ? '10s NS-Green → 10s EW-Green (loop)' : 'Reinforcement learning controls signals'}
+            </div>
+            <button
+              onClick={toggleFixedTimer}
+              className={`w-full py-2.5 rounded-lg text-sm font-bold transition-all shadow-sm ${
+                fixedTimer
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200'
+                  : 'bg-slate-800 hover:bg-slate-700 text-white'
+              }`}
+            >
+              {fixedTimer ? 'Restore DQN Control' : 'Enable Fixed Timer'}
+            </button>
+          </div>
+
+          {/* Emergency Preemption (EVP) Manual Trigger */}
+          <div className={`rounded-xl p-4 border shadow-sm transition-all ${evpArm ? 'bg-rose-50 border-rose-300 ring-2 ring-rose-300' : 'bg-white border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <Siren className={`w-4 h-4 ${evpArm ? 'text-rose-600 animate-pulse' : 'text-slate-400'}`} />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Emergency Preemption</span>
+            </div>
+            <div className={`text-sm font-bold mb-3 ${evpArm ? 'text-rose-700' : 'text-slate-500'}`}>
+              {evpArm ? `🚨 EVP Active — ${evpArm.toUpperCase()}` : 'No active emergency'}
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              {(['north','south','east','west'] as const).map(arm => (
+                <button
+                  key={arm}
+                  onClick={() => triggerEmergency(arm)}
+                  className={`py-1.5 rounded-lg text-xs font-bold transition-all border ${evpArm === arm ? 'bg-rose-600 text-white border-rose-600 shadow-rose-200 shadow' : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'}`}
+                >
+                  🚑 {arm.charAt(0).toUpperCase() + arm.slice(1)}
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={resetEmergency}
+              className="w-full py-1.5 rounded-lg text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 transition-all"
+            >
+              ✕ Clear EVP
             </button>
           </div>
 

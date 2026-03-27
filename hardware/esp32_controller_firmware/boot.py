@@ -6,8 +6,8 @@
 #   ampy --port COM3 put boot.py
 #
 # ⚠️  EDIT these two values before flashing:
-WIFI_SSID     = "First floor"    # Your mobile hotspot SSID
-WIFI_PASSWORD = "Moh@3301"    # Your mobile hotspot password
+WIFI_SSID     = "Vishal Singh"    # Your mobile hotspot SSID
+WIFI_PASSWORD = "8755655652"    # Your mobile hotspot password
 
 import network
 import time

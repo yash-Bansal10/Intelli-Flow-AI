@@ -1,7 +1,7 @@
 "use client"
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Map, Camera, BarChart2, Shield, Settings } from 'lucide-react'
+import { Map, Camera, BarChart2, Shield, Settings, AlertTriangle } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSidebar } from '@/context/SidebarContext'
 
@@ -10,11 +10,12 @@ export function Sidebar() {
   const { isOpen } = useSidebar()
 
   const navItems = [
-    { href: '/', label: 'Simulation', icon: Map },
-    { href: '/camera', label: 'Demo', icon: Camera },
-    { href: '/analytics', label: 'Analytics', icon: BarChart2 },
-    { href: '/security', label: 'Security', icon: Shield },
-    { href: '/settings', label: 'Settings', icon: Settings },
+    { href: '/',            label: 'Simulation',  icon: Map },
+    { href: '/camera',      label: 'Demo',         icon: Camera },
+    { href: '/analytics',   label: 'Analytics',    icon: BarChart2 },
+    { href: '/violations',  label: 'Violations',   icon: AlertTriangle },
+    { href: '/security',    label: 'Security',     icon: Shield },
+    { href: '/settings',    label: 'Settings',     icon: Settings },
   ]
 
   const isSecurityTab = pathname === '/security'
