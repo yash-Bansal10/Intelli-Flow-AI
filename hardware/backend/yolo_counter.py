@@ -28,6 +28,7 @@ class YoloCounter:
         logger.info(f"[YOLO] Loading model from {model_path} …")
         try:
             self.model = YOLO(model_path)
+            self.model.to("cpu")  # Force CPU — avoids cudaErrorUnknown crashes on laptop GPUs
             self.model.fuse()  # optimise for inference
             logger.info("[YOLO] Model loaded successfully.")
         except Exception as e:
@@ -91,7 +92,7 @@ class YoloCounter:
     def _run_inference(self, crop: np.ndarray) -> dict:
         try:
             # Force imgsz=320 to massively speed up CPU inference (from 400ms to <100ms)
-            preds = self.model(crop, conf=YOLO_CONF_THRESHOLD, imgsz=320, verbose=False)
+            preds = self.model(crop, conf=YOLO_CONF_THRESHOLD, imgsz=320, verbose=False, device="cpu")
         except Exception as e:
             logger.error(f"[YOLO] Inference error: {e}")
             return self._empty_result()

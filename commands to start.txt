@@ -1,0 +1,15 @@
+commands for traffic management
+
+cd c:\Users\Techn\Downloads\TrafficProject\Intelli-Flow-AI\ai_core
+venv\Scripts\activate
+python train.py --map connaught_place --gui
+cd ..\hardware\backend
+uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+cd .\Intelli-Flow-AI\traffic-dashboard_main\
+npm run dev
+change the wifi ssid and password
+set urls of esp32, esp32cam in hardware/backend/config.py
+
+errors can happen, try:
+URLs in hardware/backend/config.py
+check loose wires
