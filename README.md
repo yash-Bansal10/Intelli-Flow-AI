@@ -25,6 +25,20 @@
 
 ---
 
+## Hardware Demo Video
+
+<div align="center">
+  <a href="https://youtu.be/QLsqeiH898M" target="_blank">
+    <img src="https://img.youtube.com/vi/QLsqeiH898M/maxresdefault.jpg" alt="IntelliFlow Hardware Demo Video" width="80%" style="border-radius: 12px;" />
+  </a>
+  <br /><br />
+  <a href="https://youtu.be/QLsqeiH898M">
+    <img src="https://img.shields.io/badge/▶ Watch Full Demo-YouTube-red?style=for-the-badge&logo=youtube&logoColor=white" alt="Watch Demo" />
+  </a>
+</div>
+
+---
+
 ## 🛑 The Problem
 
 Modern cities are plagued by outdated, fixed-time traffic light controllers. These traditional, rigid systems lead to massive problems:
