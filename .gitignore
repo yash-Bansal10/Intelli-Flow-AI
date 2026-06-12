@@ -23,3 +23,5 @@ ai_core/training_scores.txt
 ai_core/learning_curve.png
 
 __pycache__/
+*.weights.h5 
+ai_core/junction_atlas.json 
