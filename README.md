@@ -67,15 +67,13 @@ While global projects like _Alibaba City Brain_ use a **Centralized Cloud** appr
 
 ## Screenshots
 
-![login page](https://media.licdn.com/dms/image/v2/D562DAQH7erTd9dIgjQ/profile-treasury-image-shrink_1280_1280/B56Z8oWyI7GUAc-/0/1783088489265?e=1783839600&v=beta&t=HZ6vvRHM1WPYRpKK1fdKkNmkN6ATAwKL8h3dFkO9rc4)
+![login page](assets/login_page.jpg)
 
-![Delhi map view](https://media.licdn.com/dms/image/v2/D562DAQHeWhpk3qC1nw/profile-treasury-image-shrink_1280_1280/B56Z8oWyOVGsAY-/0/1783088489583?e=1783839600&v=beta&t=5dTU3730U-oQMfMw_Ca2qpz5kdqPPvThABMpgc0KrBM)
+![Delhi map view](assets/delhi_map_view.jpg)
 
-![Automated Challan page](https://media.licdn.com/dms/image/v2/D562DAQFyAz8U0_9v5g/profile-treasury-image-shrink_800_800/B56Z8oWyTTGcAI-/0/1783088489940?e=1783839600&v=beta&t=yAfff-HR8ELa1U3V1zjJK3D5FO4Fo9Sv9Fcih0Dsq9I)
+![Automated Challan page](assets/automated_challan.jpg)
 
-![Analytics page](https://media.licdn.com/dms/image/v2/D562DAQFXhEXREvRyPQ/profile-treasury-image-shrink_1280_1280/B56Z8oWyPkIMAg-/0/1783088489704?e=1783839600&v=beta&t=NZdTsXZN8QDH8vX5w5f2l4oFG0NdE0FSZ9NWtKPB1Eo)
-
-![Video feed for vehicle detection](https://media.licdn.com/dms/image/v2/D562DAQF-z4zPClFcjw/profile-treasury-image-shrink_1280_1280/B56Z8jZ10GKUAY-/0/1783005404769?e=1783839600&v=beta&t=DaBg5JEaksLi4ht-AuJcRoeJXY9BbZvyOWosreNyvyg)
+![Analytics page](assets/analytics_page.jpg)
 
 ## ⚙️ How We Achieve It (The Workflow)
 
